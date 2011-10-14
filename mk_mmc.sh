@@ -39,24 +39,18 @@ unset KERNEL_DEB
 SCRIPT_VERSION="1.11"
 IN_VALID_UBOOT=1
 
+RFS=ext4
 MIRROR="http://rcn-ee.net/deb/"
-DIST=squeeze
+DIST=f13
 
 BOOT_LABEL=boot
+RFS_LABEL=rootfs
 PARTITION_PREFIX=""
 
-MAVERICK_NETIMAGE="current"
-MAVERICK_MD5SUM="12c0f04da6b8fb118939489f237e4c86"
+FEDORA_MIRROR="http://scotland.proximity.on.ca/fedora-arm/rootfs/"
 
-NATTY_NETIMAGE="current"
-NATTY_MD5SUM="a88f348be5c94873be0d67a9ce8e485e"
-
-ONEIRIC_NETIMAGE="current"
-ONEIRIC_MD5SUM="3a8978191d7a0544e229de54e4cc8e76"
-
-#SQUEEZE_NETIMAGE="current"
-SQUEEZE_NETIMAGE="20110106+squeeze3"
-SQUEEZE_MD5SUM="b0caf7d86e9dc37e8d5b8c39d47c4884"
+F13_IMAGE="rootfs-f13-beta3-2011-05-10.tar.bz2"
+F13_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
 
 DIR=$PWD
 TEMPDIR=$(mktemp -d)
@@ -132,104 +126,62 @@ fi
 
 function boot_files_template {
 
-mkdir -p ${TEMPDIR}/boot.scr/
+mkdir -p ${TEMPDIR}/
 
-cat > ${TEMPDIR}/boot.scr/netinstall.cmd <<netinstall_boot_cmd
+cat > ${TEMPDIR}/boot.cmd <<boot_cmd
 setenv dvimode VIDEO_TIMING
 setenv vram 12MB
-setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage.net; fatload mmc 0:1 UINITRD_ADDR uInitrd.net; bootm UIMAGE_ADDR UINITRD_ADDR'
-setenv bootargs console=SERIAL_CONSOLE VIDEO_CONSOLE root=/dev/ram0 rw VIDEO_RAM VIDEO_DEVICE:VIDEO_MODE fixrtc buddy=\${buddy} mpurate=\${mpurate}
-boot
-netinstall_boot_cmd
-
-cat > ${TEMPDIR}/boot.scr/boot.cmd <<boot_cmd
-setenv dvimode VIDEO_TIMING
-setenv vram 12MB
-setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; fatload mmc 0:1 UINITRD_ADDR uInitrd; bootm UIMAGE_ADDR UINITRD_ADDR'
-setenv bootargs console=SERIAL_CONSOLE VIDEO_CONSOLE root=/dev/mmcblk0p5 rootwait ro VIDEO_RAM VIDEO_DEVICE:VIDEO_MODE fixrtc buddy=\${buddy} mpurate=\${mpurate}
+setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; bootm UIMAGE_ADDR'
+setenv bootargs console=SERIAL_CONSOLE VIDEO_CONSOLE root=/dev/mmcblk0p2 rootwait ro VIDEO_RAM VIDEO_DEVICE:VIDEO_MODE fixrtc buddy=\${buddy} mpurate=\${mpurate}
 boot
 boot_cmd
+
+cat > ${TEMPDIR}/uEnv.cmd <<uenv_boot_cmd
+bootenv=boot.scr
+loaduimage=fatload mmc \${mmcdev} \${loadaddr} \${bootenv}
+mmcboot=echo Running boot.scr script from mmc ...; source \${loadaddr}
+uenv_boot_cmd
 
 }
 
 function set_defaults {
 
- wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}/LATEST-${SUBARCH}
-
- if [ "$BETA_KERNEL" ];then
-  KERNEL_SEL="TESTING"
- else
-  KERNEL_SEL="STABLE"
- fi
-
- if [ "$EXPERIMENTAL_KERNEL" ];then
-  KERNEL_SEL="EXPERIMENTAL"
- fi
-
-
-if [ ! "${KERNEL_DEB}" ] ; then
-
- FTP_DIR=$(cat ${TEMPDIR}/dl/LATEST-${SUBARCH} | grep "ABI:1 ${KERNEL_SEL}" | awk '{print $3}')
- FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')
- KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
-
- wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}/${FTP_DIR}/
- ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
-
-else
-
- KERNEL=${DEB_FILE}
- #Remove all "\" from file name.
- ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
-
-fi
-
- echo "Using: ${ACTUAL_DEB_FILE}"
-
- #Setup serial
- sed -i -e 's:SERIAL:'$SERIAL':g' ${DIR}/scripts/serial.conf
- sed -i -e 's:SERIAL:'$SERIAL':g' ${DIR}/scripts/*-tweaks.diff
-
  #Set uImage boot address
- sed -i -e 's:UIMAGE_ADDR:'$UIMAGE_ADDR':g' ${TEMPDIR}/boot.scr/*.cmd
+ sed -i -e 's:UIMAGE_ADDR:'$UIMAGE_ADDR':g' ${TEMPDIR}/boot.cmd
 
  #Set uInitrd boot address
- sed -i -e 's:UINITRD_ADDR:'$UINITRD_ADDR':g' ${TEMPDIR}/boot.scr/*.cmd
+ sed -i -e 's:UINITRD_ADDR:'$UINITRD_ADDR':g' ${TEMPDIR}/boot.cmd
 
  #Set the Serial Console
- sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/boot.scr/*.cmd
+ sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/boot.cmd
 
 if [ "$SERIAL_MODE" ];then
- sed -i -e 's:VIDEO_CONSOLE ::g' ${TEMPDIR}/boot.scr/*.cmd
- sed -i -e 's:VIDEO_RAM ::g' ${TEMPDIR}/boot.scr/*.cmd
- sed -i -e "s/VIDEO_DEVICE:VIDEO_MODE //g" ${TEMPDIR}/boot.scr/*.cmd
+ sed -i -e 's:VIDEO_CONSOLE ::g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:VIDEO_RAM ::g' ${TEMPDIR}/boot.cmd
+ sed -i -e "s/VIDEO_DEVICE:VIDEO_MODE //g" ${TEMPDIR}/boot.cmd
 else
  #Enable Video Console
- sed -i -e 's:VIDEO_CONSOLE:'$VIDEO_CONSOLE':g' ${TEMPDIR}/boot.scr/*.cmd
- sed -i -e 's:VIDEO_RAM:'vram=\${vram}':g' ${TEMPDIR}/boot.scr/*.cmd
- sed -i -e 's:VIDEO_TIMING:'$VIDEO_TIMING':g' ${TEMPDIR}/boot.scr/*.cmd
- sed -i -e 's:VIDEO_DEVICE:'$VIDEO_DRV':g' ${TEMPDIR}/boot.scr/*.cmd
- sed -i -e 's:VIDEO_MODE:'\${dvimode}':g' ${TEMPDIR}/boot.scr/*.cmd
+ sed -i -e 's:VIDEO_CONSOLE:'$VIDEO_CONSOLE':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:VIDEO_RAM:'vram=\${vram}':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:VIDEO_TIMING:'$VIDEO_TIMING':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:VIDEO_DEVICE:'$VIDEO_DRV':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:VIDEO_MODE:'\${dvimode}':g' ${TEMPDIR}/boot.cmd
 fi
 
  if [ "$USB_ROOTFS" ];then
-  sed -i 's/mmcblk0p5/sda1/g' ${TEMPDIR}/boot.scr/*.cmd
+  sed -i 's/mmcblk0p5/sda1/g' ${TEMPDIR}/boot.cmd
  fi
 
  if [ "$PRINTK" ];then
-  sed -i 's/bootargs/bootargs earlyprintk/g' ${TEMPDIR}/boot.scr/*.cmd
- fi
-
- if [ "$SMSC95XX_MOREMEM" ];then
-  sed -i 's/8192/16384/g' ${DIR}/scripts/*.diff
+  sed -i 's/bootargs/bootargs earlyprintk/g' ${TEMPDIR}/boot.cmd
  fi
 
 }
 
-function dl_xload_uboot {
+function dl_bootloader {
 
  echo ""
- echo "Downloading X-loader, Uboot, Kernel and Debian Installer"
+ echo "Downloading Bootloader"
  echo ""
 
  mkdir -p ${TEMPDIR}/dl/${DIST}
@@ -256,52 +208,85 @@ fi
 
  wget -c --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${UBOOT}
  UBOOT=${UBOOT##*/}
+}
+
+function dl_root_image {
+
+echo ""
+echo "Downloading Fedora Root Image"
+echo ""
 
 case "$DIST" in
-    maverick)
-	TEST_MD5SUM=$MAVERICK_MD5SUM
-	NETIMAGE=$MAVERICK_NETIMAGE
-	HTTP_IMAGE="http://ports.ubuntu.com/ubuntu-ports/dists"
-	BASE_IMAGE="versatile"
-        ;;
-    natty)
-	TEST_MD5SUM=$NATTY_MD5SUM
-	NETIMAGE=$NATTY_NETIMAGE
-	HTTP_IMAGE="http://ports.ubuntu.com/ubuntu-ports/dists"
-	BASE_IMAGE="versatile"
-        ;;
-    oneiric)
-	TEST_MD5SUM=$ONEIRIC_MD5SUM
-	NETIMAGE=$ONEIRIC_NETIMAGE
-	HTTP_IMAGE="http://ports.ubuntu.com/ubuntu-ports/dists"
-	BASE_IMAGE="linaro-vexpress"
-        ;;
-    squeeze)
-	TEST_MD5SUM=$SQUEEZE_MD5SUM
-	NETIMAGE=$SQUEEZE_NETIMAGE
-	HTTP_IMAGE="http://ftp.debian.org/debian/dists"
-	BASE_IMAGE="versatile"
+    f13)
+	ROOTFS_MD5SUM=$F13_MD5SUM
+	ROOTFS_IMAGE=$F13_IMAGE
         ;;
 esac
 
-if ls ${DIR}/dl/${DIST}/initrd.gz >/dev/null 2>&1;then
-  MD5SUM=$(md5sum ${DIR}/dl/${DIST}/initrd.gz | awk '{print $1}')
-  if [ "=$TEST_MD5SUM=" != "=$MD5SUM=" ]; then
+if ls ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} >/dev/null 2>&1;then
+  MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
+  if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
     echo "md5sum changed $MD5SUM"
     rm -f ${DIR}/dl/${DIST}/initrd.gz || true
-    wget --directory-prefix=${DIR}/dl/${DIST} ${HTTP_IMAGE}/${DIST}/main/installer-armel/${NETIMAGE}/images/${BASE_IMAGE}/netboot/initrd.gz
-    NEW_MD5SUM=$(md5sum ${DIR}/dl/${DIST}/initrd.gz | awk '{print $1}')
+    wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+    NEW_MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
     echo "new md5sum $NEW_MD5SUM"
   fi
 else
-  wget --directory-prefix=${DIR}/dl/${DIST} ${HTTP_IMAGE}/${DIST}/main/installer-armel/${NETIMAGE}/images/${BASE_IMAGE}/netboot/initrd.gz
+  wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
 fi
 
+}
+
+function dl_kernel_image {
+
+echo ""
+echo "Downloading Kernel Image"
+echo ""
+
+ wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/wheezy/LATEST-${SUBARCH}
+# wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}/LATEST-${SUBARCH}
+
+ if [ "$BETA_KERNEL" ];then
+  KERNEL_SEL="TESTING"
+ else
+  KERNEL_SEL="STABLE"
+ fi
+
+ if [ "$EXPERIMENTAL_KERNEL" ];then
+  KERNEL_SEL="EXPERIMENTAL"
+ fi
+
 if [ ! "${KERNEL_DEB}" ] ; then
- wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}${DIST}/v${KERNEL}/${ACTUAL_DEB_FILE}
+
+ FTP_DIR=$(cat ${TEMPDIR}/dl/LATEST-${SUBARCH} | grep "ABI:1 ${KERNEL_SEL}" | awk '{print $3}')
+ FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')
+ KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
+
+# wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}/${FTP_DIR}/
+ wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/wheezy/${FTP_DIR}/
+ ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
+
+else
+
+ KERNEL=${DEB_FILE}
+ #Remove all "\" from file name.
+ ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
+
+fi
+
+ echo "Using: ${ACTUAL_DEB_FILE}"
+
+if [ ! "${KERNEL_DEB}" ] ; then
+ wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}wheezy/v${KERNEL}/${ACTUAL_DEB_FILE}
+# wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}${DIST}/v${KERNEL}/${ACTUAL_DEB_FILE}
 else
  cp -v ${DEB_FILE} ${DIR}/dl/${DIST}/
 fi
+
+}
+
+function dl_firmware {
 
 if [ "${FIRMWARE}" ] ; then
 
@@ -315,96 +300,14 @@ if ls ${DIR}/dl/linux-firmware/.git/ >/dev/null 2>&1;then
  cd -
 else
  cd ${DIR}/dl/
- git clone git://git.kernel.org/pub/scm/linux/kernel/git/dwmw2/linux-firmware.git
+ git clone git://git.infradead.org/users/dwmw2/linux-firmware.git
+ #git clone git://git.kernel.org/pub/scm/linux/kernel/git/dwmw2/linux-firmware.git
  cd -
 fi
 
 case "$DIST" in
-    maverick)
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ http://ports.ubuntu.com/pool/main/l/linux-firmware/
-	MAVERICK_FW=$(cat ${TEMPDIR}/dl/index.html | grep 1.38 | grep linux-firmware | grep _all.deb | head -1 | awk -F"\"" '{print $8}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://ports.ubuntu.com/pool/main/l/linux-firmware/${MAVERICK_FW}
-	MAVERICK_FW=${MAVERICK_FW##*/}
-
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ http://ports.ubuntu.com/pool/multiverse/l/linux-firmware-nonfree/
-	MAVERICK_NONF_FW=$(cat ${TEMPDIR}/dl/index.html | grep 1.9 | grep linux-firmware-nonfree | grep _all.deb | head -1 | awk -F"\"" '{print $8}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://ports.ubuntu.com/pool/multiverse/l/linux-firmware-nonfree/${MAVERICK_NONF_FW}
-	MAVERICK_NONF_FW=${MAVERICK_NONF_FW##*/}
-
-	#ar9170
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.2/carl9170-1.fw
-	AR9170_FW="carl9170-1.fw"
-        ;;
-    natty)
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ http://ports.ubuntu.com/pool/main/l/linux-firmware/
-	NATTY_FW=$(cat ${TEMPDIR}/dl/index.html | grep 1.52 | grep linux-firmware | grep _all.deb | head -1 | awk -F"\"" '{print $8}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://ports.ubuntu.com/pool/main/l/linux-firmware/${NATTY_FW}
-	NATTY_FW=${NATTY_FW##*/}
-
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ http://ports.ubuntu.com/pool/multiverse/l/linux-firmware-nonfree/
-	NATTY_NONF_FW=$(cat ${TEMPDIR}/dl/index.html | grep 1.9 | grep linux-firmware-nonfree | grep _all.deb | head -1 | awk -F"\"" '{print $8}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://ports.ubuntu.com/pool/multiverse/l/linux-firmware-nonfree/${NATTY_NONF_FW}
-	NATTY_NONF_FW=${NATTY_NONF_FW##*/}
-
-	#ar9170
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.2/carl9170-1.fw
-	AR9170_FW="carl9170-1.fw"
-        ;;
-    oneiric)
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ http://ports.ubuntu.com/pool/main/l/linux-firmware/
-	ONEIRIC_FW=$(cat ${TEMPDIR}/dl/index.html | grep 1.56 | grep linux-firmware | grep _all.deb | head -1 | awk -F"\"" '{print $8}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://ports.ubuntu.com/pool/main/l/linux-firmware/${ONEIRIC_FW}
-	ONEIRIC_FW=${ONEIRIC_FW##*/}
-
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ http://ports.ubuntu.com/pool/multiverse/l/linux-firmware-nonfree/
-	ONEIRIC_NONF_FW=$(cat ${TEMPDIR}/dl/index.html | grep 1.9 | grep linux-firmware-nonfree | grep _all.deb | head -1 | awk -F"\"" '{print $8}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://ports.ubuntu.com/pool/multiverse/l/linux-firmware-nonfree/${ONEIRIC_NONF_FW}
-	ONEIRIC_NONF_FW=${ONEIRIC_NONF_FW##*/}
-
-	#ar9170
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.2/carl9170-1.fw
-	AR9170_FW="carl9170-1.fw"
-        ;;
-    squeeze)
-	#from: http://packages.debian.org/source/squeeze/firmware-nonfree
-
-	#Atmel
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ ftp://ftp.us.debian.org/debian/pool/non-free/a/atmel-firmware/
-	ATMEL_FW=$(cat ${TEMPDIR}/dl/index.html | grep atmel | grep -v diff.gz | grep -v .dsc | grep -v orig.tar.gz | tail -1 | awk -F"\"" '{print $2}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} ${ATMEL_FW}
-	ATMEL_FW=${ATMEL_FW##*/}
-
-	#Ralink
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ ftp://ftp.us.debian.org/debian/pool/non-free/f/firmware-nonfree/
-	RALINK_FW=$(cat ${TEMPDIR}/dl/index.html | grep ralink | grep -v lenny | tail -1 | awk -F"\"" '{print $2}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} ${RALINK_FW}
-	RALINK_FW=${RALINK_FW##*/}
-
-	#libertas
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ ftp://ftp.us.debian.org/debian/pool/non-free/libe/libertas-firmware/
-	LIBERTAS_FW=$(cat ${TEMPDIR}/dl/index.html | grep libertas | grep -v diff.gz | grep -v .dsc | grep -v orig.tar.gz | tail -1 | awk -F"\"" '{print $2}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} ${LIBERTAS_FW}
-	LIBERTAS_FW=${LIBERTAS_FW##*/}
-
-	#zd1211
-	rm -f ${TEMPDIR}/dl/index.html || true
-	wget --directory-prefix=${TEMPDIR}/dl/ ftp://ftp.us.debian.org/debian/pool/non-free/z/zd1211-firmware/
-	ZD1211_FW=$(cat ${TEMPDIR}/dl/index.html | grep zd1211 | grep -v diff.gz | grep -v tar.gz | grep -v .dsc | tail -1 | awk -F"\"" '{print $2}')
-	wget -c --directory-prefix=${DIR}/dl/${DIST} ${ZD1211_FW}
-	ZD1211_FW=${ZD1211_FW##*/}
-
-	#ar9170
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.2/carl9170-1.fw
-	AR9170_FW="carl9170-1.fw"
+    f13)
+	echo "nothing yet"
         ;;
 esac
 
@@ -412,12 +315,6 @@ fi
 
 }
 
-function prepare_uimage {
- mkdir -p ${TEMPDIR}/kernel
- cd ${TEMPDIR}/kernel
- sudo dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/kernel
- cd ${DIR}/
-}
 
 function prepare_initrd {
  mkdir -p ${TEMPDIR}/initrd-tree
@@ -428,149 +325,7 @@ function prepare_initrd {
 
  sudo mkdir -p ${TEMPDIR}/initrd-tree/lib/firmware/
 
-if [ "${FIRMWARE}" ] ; then
 
-case "$DIST" in
-    maverick)
-	sudo dpkg -x ${DIR}/dl/${DIST}/${MAVERICK_FW} ${TEMPDIR}/initrd-tree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${MAVERICK_NONF_FW} ${TEMPDIR}/initrd-tree
-	sudo cp -v ${DIR}/dl/${DIST}/${AR9170_FW} ${TEMPDIR}/initrd-tree/lib/firmware/
-	sudo cp -vr ${DIR}/dl/linux-firmware/ti-connectivity ${TEMPDIR}/initrd-tree/lib/firmware/
-        ;;
-    natty)
-	sudo dpkg -x ${DIR}/dl/${DIST}/${NATTY_FW} ${TEMPDIR}/initrd-tree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${NATTY_NONF_FW} ${TEMPDIR}/initrd-tree
-	sudo cp -v ${DIR}/dl/${DIST}/${AR9170_FW} ${TEMPDIR}/initrd-tree/lib/firmware/
-	sudo cp -vr ${DIR}/dl/linux-firmware/ti-connectivity ${TEMPDIR}/initrd-tree/lib/firmware/
-        ;;
-    oneiric)
-	sudo dpkg -x ${DIR}/dl/${DIST}/${ONEIRIC_FW} ${TEMPDIR}/initrd-tree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${ONEIRIC_NONF_FW} ${TEMPDIR}/initrd-tree
-	sudo cp -v ${DIR}/dl/${DIST}/${AR9170_FW} ${TEMPDIR}/initrd-tree/lib/firmware/
-	sudo cp -vr ${DIR}/dl/linux-firmware/ti-connectivity ${TEMPDIR}/initrd-tree/lib/firmware/
-        ;;
-    squeeze)
-	#from: http://packages.debian.org/source/squeeze/firmware-nonfree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${ATMEL_FW} ${TEMPDIR}/initrd-tree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${RALINK_FW} ${TEMPDIR}/initrd-tree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${LIBERTAS_FW} ${TEMPDIR}/initrd-tree
-	sudo dpkg -x ${DIR}/dl/${DIST}/${ZD1211_FW} ${TEMPDIR}/initrd-tree
-	sudo cp -v ${DIR}/dl/${DIST}/${AR9170_FW} ${TEMPDIR}/initrd-tree/lib/firmware/
-	sudo cp -vr ${DIR}/dl/linux-firmware/ti-connectivity ${TEMPDIR}/initrd-tree/lib/firmware/
-        ;;
-esac
-
-fi
-
- #Cleanup some of the extra space..
- sudo rm -f ${TEMPDIR}/initrd-tree/boot/*-${KERNEL} || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/media/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/usb/serial/ || true
-
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/net/bluetooth/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/net/irda/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/net/hamradio/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/net/can/ || true
-
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/drivers/misc || true
-
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/net/irda/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/net/decnet/ || true
-
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/fs/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/${KERNEL}/kernel/sound/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/modules/*-versatile/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/*-versatile/ || true
-
- #introduced with the big linux-firmware
- #http://packages.ubuntu.com/lucid/all/linux-firmware/filelist
-
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/agere* || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/bnx2x-* || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/bcm700*fw.bin || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/dvb-* || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/ql2* || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/whiteheat* || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/v4l* || true
-
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/3com/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/acenic/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/adaptec/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/advansys/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/asihpi/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/bnx2/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/cpia2/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/cxgb3/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/ea/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/emi26/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/emi62/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/ess/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/korg/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/keyspan/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/matrox/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/myricom/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/qlogic/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/r128/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/radeon/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/sb16/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/slicoss/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/sun/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/sxg/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/tehuti/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/tigon/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/ueagle-atm/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/vicam/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/yam/ || true
- sudo rm -rf ${TEMPDIR}/initrd-tree/lib/firmware/yamaha/ || true
-
-#Help debug ${DIST}-tweaks.diff patch
-#echo "cd ${TEMPDIR}/initrd-tree/"
-#echo "baobab ${TEMPDIR}/initrd-tree/"
-#echo "sudo patch -p1 -s < ${DIR}/scripts/${DIST}-tweaks.diff"
-#exit
-
- cd ${TEMPDIR}/initrd-tree/
- case "$DIST" in
-     maverick)
-         sudo patch -p1 < ${DIR}/scripts/ubuntu-tweaks.diff
-         ;;
-     natty)
-         sudo patch -p1 < ${DIR}/scripts/ubuntu-tweaks.diff
-         ;;
-     oneiric)
-         sudo patch -p1 < ${DIR}/scripts/ubuntu-tweaks.diff
-         ;;
-     squeeze)
-         sudo patch -p1 < ${DIR}/scripts/debian-tweaks.diff
-         ;;
-     esac
- cd ${DIR}/
-
-case "$DIST" in
-    maverick)
-	sudo cp -v ${DIR}/scripts/flash-kernel.conf ${TEMPDIR}/initrd-tree/etc/flash-kernel.conf
-	sudo cp -v ${DIR}/scripts/serial.conf ${TEMPDIR}/initrd-tree/etc/${SERIAL}.conf
-	sudo chmod a+x ${TEMPDIR}/initrd-tree/usr/lib/finish-install.d/08rcn-omap
-	sudo cp -v ${DIR}/scripts/${DIST}-preseed.cfg ${TEMPDIR}/initrd-tree/preseed.cfg
-        ;;
-    natty)
-	sudo cp -v ${DIR}/scripts/flash-kernel.conf ${TEMPDIR}/initrd-tree/etc/flash-kernel.conf
-	sudo cp -v ${DIR}/scripts/serial.conf ${TEMPDIR}/initrd-tree/etc/${SERIAL}.conf
-	sudo chmod a+x ${TEMPDIR}/initrd-tree/usr/lib/finish-install.d/08rcn-omap
-	sudo cp -v ${DIR}/scripts/${DIST}-preseed.cfg ${TEMPDIR}/initrd-tree/preseed.cfg
-        ;;
-    oneiric)
-	sudo cp -v ${DIR}/scripts/flash-kernel.conf ${TEMPDIR}/initrd-tree/etc/flash-kernel.conf
-	sudo cp -v ${DIR}/scripts/serial.conf ${TEMPDIR}/initrd-tree/etc/${SERIAL}.conf
-	sudo chmod a+x ${TEMPDIR}/initrd-tree/usr/lib/finish-install.d/08rcn-omap
-	sudo cp -v ${DIR}/scripts/${DIST}-preseed.cfg ${TEMPDIR}/initrd-tree/preseed.cfg
-        ;;
-    squeeze)
-	sudo cp -v ${DIR}/scripts/e2fsck.conf ${TEMPDIR}/initrd-tree/etc/e2fsck.conf
-	sudo chmod a+x ${TEMPDIR}/initrd-tree/usr/lib/finish-install.d/08rcn-omap
-	sudo cp -v ${DIR}/scripts/${DIST}-preseed.cfg ${TEMPDIR}/initrd-tree/preseed.cfg
-        ;;
-esac
 
  sudo touch ${TEMPDIR}/initrd-tree/etc/rcn.conf
 
@@ -582,19 +337,12 @@ esac
   echo "vm.min_free_kbytes = 8192" | sudo tee -a ${TEMPDIR}/initrd-tree/etc/sysctl.conf
  fi
 
- if [ "${SERIAL_MODE}" ] ; then
-  if [ ! "${DO_UBOOT_DD}" ] ; then
-   #this needs more thought, need to disable the check for mx53loco, but maybe we don't need it for omap..
-   sudo touch ${TEMPDIR}/initrd-tree/etc/rcn-serial.conf
-  fi
- fi
-
  cd ${TEMPDIR}/initrd-tree/
  find . | cpio -o -H newc | gzip -9 > ${TEMPDIR}/initrd.mod.gz
  cd ${DIR}/
 }
 
-function cleanup_sd {
+function umount_partitions {
 
  echo ""
  echo "Umounting Partitions"
@@ -608,10 +356,13 @@ NUM_MOUNTS=$(mount | grep -v none | grep "$MMC" | wc -l)
   sudo umount ${DRIVE} &> /dev/null || true
  done
 
- sudo parted --script ${MMC} mklabel msdos
 }
 
-function uboot_in_fat {
+function omap_uboot_in_fat {
+
+echo ""
+echo "Setting up Omap Boot Partition"
+echo ""
 
 sudo fdisk ${FDISK_DOS} ${MMC} << END
 n
@@ -629,41 +380,66 @@ sync
 
 sudo parted --script ${MMC} set 1 boot on
 
-echo ""
-echo "Formating Boot Partition"
-echo ""
-
-sudo mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
-
 }
 
-function dd_uboot {
+function imx_dd_uboot {
+
+echo ""
+echo "Setting up Imx Boot Partition"
+echo ""
 
 sudo dd if=${TEMPDIR}/dl/${UBOOT} of=${MMC} seek=1 bs=1024
 
 #for now, lets default to fat16
 sudo parted --script ${PARTED_ALIGN} ${MMC} mkpart primary fat16 10 100
-#sudo parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ext3 10 100
-
-echo ""
-echo "Formating Boot Partition"
-echo ""
-
-sudo mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
-#sudo mkfs.ext3 ${MMC}${PARTITION_PREFIX}1 -L ${BOOT_LABEL}
 
 }
 
-function create_partitions {
+function boot_partition {
 
+sudo parted --script ${MMC} mklabel msdos
+ 
 if [ "${DO_UBOOT_DD}" ] ; then
- dd_uboot
+ imx_dd_uboot
 else
- uboot_in_fat 
+ omap_uboot_in_fat 
 fi
 
-mkdir ${TEMPDIR}/disk
-sudo mount ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk
+}
+
+function root_partition {
+
+echo ""
+echo "Setting up Root Partition"
+echo ""
+
+unset END_BOOT
+END_BOOT=$(LC_ALL=C sudo parted -s ${MMC} unit mb print free | grep primary | awk '{print $3}' | cut -d "M" -f1)
+
+unset END_DEVICE
+END_DEVICE=$(LC_ALL=C sudo parted -s ${MMC} unit mb print free | grep Free | tail -n 1 | awk '{print $2}' | cut -d "M" -f1)
+
+sudo parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${RFS} ${END_BOOT} ${END_DEVICE}
+sync
+
+}
+
+function format_partitions {
+
+echo ""
+echo "Setting up Root Partition"
+echo ""
+
+sudo mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
+sudo mkfs.${RFS} ${MMC}${PARTITION_PREFIX}2 -L ${RFS_LABEL}
+
+}
+
+function copy_boot_files {
+
+mkdir -p ${TEMPDIR}/disk
+
+if sudo mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
 
 if [ "${HASMLO}" ] ; then
  if ls ${TEMPDIR}/dl/${MLO} >/dev/null 2>&1;then
@@ -681,159 +457,88 @@ if [ ! "${DO_UBOOT_DD}" ] ; then
  fi
 fi
 
-echo "uInitrd Installer"
-sudo mkimage -A arm -O linux -T ramdisk -C none -a 0 -e 0 -n initramfs -d ${TEMPDIR}/initrd.mod.gz ${TEMPDIR}/disk/uInitrd.net
-echo "uImage"
-sudo mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${KERNEL} -d ${TEMPDIR}/kernel/boot/vmlinuz-* ${TEMPDIR}/disk/uImage.net
-
-echo "debian netinstall.cmd"
-cat ${TEMPDIR}/boot.scr/netinstall.cmd
-sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Debian Installer" -d ${TEMPDIR}/boot.scr/netinstall.cmd ${TEMPDIR}/disk/boot.scr
-sudo cp -v ${DIR}/scripts/uEnv.txt/uEnv.cmd ${TEMPDIR}/disk/uEnv.txt
+mkdir -p ${TEMPDIR}/kernel
+sudo dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/kernel
+sudo mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${KERNEL} -d ${TEMPDIR}/kernel/boot/vmlinuz-* ${TEMPDIR}/disk/uImage
 
 echo "boot.cmd"
-cat ${TEMPDIR}/boot.scr/boot.cmd
-sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot" -d ${TEMPDIR}/boot.scr/boot.cmd ${TEMPDIR}/disk/user.scr
-sudo cp -v ${TEMPDIR}/boot.scr/boot.cmd ${TEMPDIR}/disk/boot.cmd
-
-sudo cp -v ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/disk/
-
-cat > ${TEMPDIR}/readme.txt <<script_readme
-
-These can be run from anywhere, but just in case change to "cd /boot/uboot"
-
-Tools:
-
- "./tools/update_boot_files.sh"
-
-Updated with a custom uImage and modules or modified the boot.cmd/user.com files with new boot args? Run "./tools/update_boot_files.sh" to regenerate all boot files...
-
-Applications:
-
- "./tools/minimal_xfce.sh"
-
-Install minimal xfce shell, make sure to have network setup: "sudo ifconfig -a" then "sudo dhclient usb1" or "eth0/etc"
-
- "./tools/get_chrome.sh"
-
-Install Google's Chrome web browswer.
-
-script_readme
-
-cat > ${TEMPDIR}/update_boot_files.sh <<update_boot_files
-#!/bin/sh
-
-cd /boot/uboot
-sudo mount -o remount,rw /boot/uboot
-
-if ! ls /boot/initrd.img-\$(uname -r) >/dev/null 2>&1;then
-sudo update-initramfs -c -k \$(uname -r)
-else
-sudo update-initramfs -u -k \$(uname -r)
-fi
-
-if ls /boot/initrd.img-\$(uname -r) >/dev/null 2>&1;then
-sudo mkimage -A arm -O linux -T ramdisk -C none -a 0 -e 0 -n initramfs -d /boot/initrd.img-\$(uname -r) /boot/uboot/uInitrd
-fi
-
-if ls /boot/uboot/boot.cmd >/dev/null 2>&1;then
-sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d /boot/uboot/boot.cmd /boot/uboot/boot.scr
-fi
-if ls /boot/uboot/serial.cmd >/dev/null 2>&1;then
-sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d /boot/uboot/serial.cmd /boot/uboot/boot.scr
-fi
-sudo cp /boot/uboot/boot.scr /boot/uboot/boot.ini
-if ls /boot/uboot/user.cmd >/dev/null 2>&1;then
-sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Reset Nand" -d /boot/uboot/user.cmd /boot/uboot/user.scr
-fi
-
-update_boot_files
-
-cat > ${TEMPDIR}/minimal_xfce.sh <<basic_xfce
-#!/bin/sh
-
-sudo apt-get update
-if lsb_release -c | grep oneiric ; then
-sudo apt-get -y install xubuntu-desktop
-else
-sudo apt-get -y install xfce4 gdm xubuntu-gdm-theme xubuntu-artwork xserver-xorg-video-omap3 network-manager
-fi
-
-basic_xfce
-
-cat > ${TEMPDIR}/get_chrome.sh <<latest_chrome
-#!/bin/sh
-
-#setup libs
-
-sudo apt-get update
-sudo apt-get -y install libnss3-1d unzip libxss1
-
-sudo ln -sf /usr/lib/libsmime3.so /usr/lib/libsmime3.so.12
-sudo ln -sf /usr/lib/libnssutil3.so /usr/lib/libnssutil3.so.12
-sudo ln -sf /usr/lib/libnss3.so /usr/lib/libnss3.so.12
-
-sudo ln -sf /usr/lib/libplds4.so /usr/lib/libplds4.so.8
-sudo ln -sf /usr/lib/libplc4.so /usr/lib/libplc4.so.8
-sudo ln -sf /usr/lib/libnspr4.so /usr/lib/libnspr4.so.8
-
-if [ -f /tmp/LATEST ] ; then
- rm -f /tmp/LATEST &> /dev/null
-fi
-
-if [ -f /tmp/chrome-linux.zip ] ; then
- rm -f /tmp/chrome-linux.zip &> /dev/null
-fi
-
-wget --no-verbose --directory-prefix=/tmp/ http://build.chromium.org/buildbot/snapshots/chromium-rel-arm/LATEST
-
-CHROME_VER=\$(cat /tmp/LATEST)
-
-wget --directory-prefix=/tmp/ http://build.chromium.org/buildbot/snapshots/chromium-rel-arm/\${CHROME_VER}/chrome-linux.zip
-
-sudo mkdir -p /opt/chrome-linux/
-sudo chown -R \$USER:\$USER /opt/chrome-linux/
-
-if [ -f /tmp/chrome-linux.zip ] ; then
- unzip -o /tmp/chrome-linux.zip -d /opt/
-fi
-
-cat > /tmp/chrome.desktop <<chrome_launcher
-[Desktop Entry]
-Version=1.0
-Type=Application
-Encoding=UTF-8
-Exec=/opt/chrome-linux/chrome %u
-Icon=web-browser
-StartupNotify=false
-Terminal=false
-Categories=X-XFCE;X-Xfce-Toplevel;
-OnlyShowIn=XFCE;
-Name=Chromium
-
-chrome_launcher
-
-sudo mv /tmp/chrome.desktop /usr/share/applications/chrome.desktop
-
-latest_chrome
-
- sudo mkdir -p ${TEMPDIR}/disk/tools
- sudo cp -v ${TEMPDIR}/readme.txt ${TEMPDIR}/disk/tools/readme.txt
-
- sudo cp -v ${TEMPDIR}/update_boot_files.sh ${TEMPDIR}/disk/tools/update_boot_files.sh
- sudo chmod +x ${TEMPDIR}/disk/tools/update_boot_files.sh
-
- sudo cp -v ${TEMPDIR}/minimal_xfce.sh ${TEMPDIR}/disk/tools/minimal_xfce.sh
- sudo chmod +x ${TEMPDIR}/disk/tools/minimal_xfce.sh
-
- sudo cp -v ${TEMPDIR}/get_chrome.sh ${TEMPDIR}/disk/tools/get_chrome.sh
- sudo chmod +x ${TEMPDIR}/disk/tools/get_chrome.sh
+cat ${TEMPDIR}/boot.cmd
+sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d ${TEMPDIR}/boot.cmd ${TEMPDIR}/disk/boot.scr
+sudo cp -v ${TEMPDIR}/uEnv.cmd ${TEMPDIR}/disk/uEnv.txt
+sudo cp -v ${TEMPDIR}/boot.cmd ${TEMPDIR}/disk/boot.cmd
 
 cd ${TEMPDIR}/disk
 sync
 cd ${DIR}/
 sudo umount ${TEMPDIR}/disk || true
-echo "done"
+
+ echo ""
+ echo "Finished populating Boot Partition"
+else
+ echo ""
+ echo "Unable to mount ${MMC}${PARTITION_PREFIX}1 at ${TEMPDIR}/disk to complete populating Boot Partition"
+ echo "Please retry running the script, sometimes rebooting your system helps."
+ echo ""
+ exit
+fi
+
+}
+
+function copy_rootfs_files {
+
+if sudo mount -t ${RFS} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
+
+ if ls ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} >/dev/null 2>&1;then
+   pv ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+ fi
+
+ sudo dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/disk/
+
+ sudo sed -i 's/root/mmcblk2/g' ${TEMPDIR}/disk/etc/fstab
+ sudo sed -i 's:nfs:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
+
+if [ "$BTRFS_FSTAB" ] ; then
+ sudo sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
+fi
+
+ if [ "$CREATE_SWAP" ] ; then
+
+  echo ""
+  echo "Extra: Creating SWAP File"
+  echo ""
+  echo "SWAP BUG creation note:"
+  echo "IF this takes a long time(>= 5mins) open another terminal and run dmesg"
+  echo "if theres a nasty error, ctrl-c/reboot and try again... its an annoying bug.."
+  echo ""
+
+  SPACE_LEFT=$(df ${TEMPDIR}/disk/ | grep ${MMC}${PARTITION_PREFIX}2 | awk '{print $4}')
+
+  let SIZE=$SWAP_SIZE*1024
+
+  if [ $SPACE_LEFT -ge $SIZE ] ; then
+   dd if=/dev/zero of=${TEMPDIR}/disk/mnt/SWAP.swap bs=1M count=$SWAP_SIZE
+   mkswap ${TEMPDIR}/disk/mnt/SWAP.swap
+   echo "/mnt/SWAP.swap  none  swap  sw  0 0" >> ${TEMPDIR}/disk/etc/fstab
+   else
+   echo "FIXME Recovery after user selects SWAP file bigger then whats left not implemented"
+  fi
+ fi
+
+ cd ${TEMPDIR}/disk/
+ sync
+ sync
+ cd ${DIR}/
+ sudo umount ${TEMPDIR}/disk || true
+
+ echo ""
+ echo "Finished populating Boot Partition"
+else
+ echo ""
+ echo "Unable to mount ${MMC}${PARTITION_PREFIX}1 at ${TEMPDIR}/disk to complete populating Boot Partition"
+ echo "Please retry running the script, sometimes rebooting your system helps."
+ echo ""
+ exit
+fi
 
 }
 
@@ -1030,6 +735,42 @@ function check_distro {
  fi
 }
 
+function check_fs_type {
+ IN_VALID_FS=1
+
+case "$FS_TYPE" in
+    ext2)
+
+ RFS=ext2
+ unset IN_VALID_FS
+
+        ;;
+    ext3)
+
+ RFS=ext3
+ unset IN_VALID_FS
+
+        ;;
+    ext4)
+
+ RFS=ext4
+ unset IN_VALID_FS
+
+        ;;
+    btrfs)
+
+ RFS=btrfs
+ unset IN_VALID_FS
+ BTRFS_FSTAB=1
+
+        ;;
+esac
+
+ if [ "$IN_VALID_FS" ] ; then
+   usage
+ fi
+}
+
 function usage {
     echo "usage: $(basename $0) --mmc /dev/sdX --uboot <dev board>"
 cat <<EOF
@@ -1060,12 +801,13 @@ Additional/Optional options:
     mx53loco
 
 --distro <distro>
-    Debian:
-      squeeze <default>
-    Ubuntu
-      maverick
-      natty
-      oneiric
+    Fedora:
+      f13 <default>
+
+--rootfs <fs_type>
+    ext3
+    ext4 - <set as default>
+    btrfs
 
 Optional:
 --firmware
@@ -1127,6 +869,11 @@ while [ ! -z "$1" ]; do
         --firmware)
             FIRMWARE=1
             ;;
+        --rootfs)
+            checkparm $2
+            FS_TYPE="$2"
+            check_fs_type 
+            ;;
         --serial-mode)
             SERIAL_MODE=1
             ;;
@@ -1166,10 +913,20 @@ fi
 
  boot_files_template
  set_defaults
- dl_xload_uboot
- prepare_initrd
- prepare_uimage
- cleanup_sd
- create_partitions
- reset_scripts
+ dl_bootloader
+ dl_root_image
+ dl_kernel_image
+ dl_firmware
+
+ umount_partitions
+ boot_partition
+ root_partition
+ umount_partitions
+ format_partitions
+
+ copy_boot_files
+ copy_rootfs_files
+
+# create_partitions
+# reset_scripts
 
