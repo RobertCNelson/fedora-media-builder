@@ -138,6 +138,35 @@ fi
 
 }
 
+function dl_bootloader {
+ echo ""
+ echo "Downloading Device's Bootloader"
+ echo "-----------------------------"
+
+ mkdir -p ${TEMPDIR}/dl/${DIST}
+ mkdir -p ${DIR}/dl/${DIST}
+
+ wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}tools/latest/bootloader
+
+ if [ "$USE_BETA_BOOTLOADER" ];then
+  ABI="ABX"
+ else
+  ABI="ABI"
+ fi
+
+ if [ "${SPL_BOOT}" ] ; then
+  MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:MLO" | awk '{print $2}')
+  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MLO}
+  MLO=${MLO##*/}
+  echo "SPL Bootloader: ${MLO}"
+ fi
+
+ UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:UBOOT" | awk '{print $2}')
+ wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${UBOOT}
+ UBOOT=${UBOOT##*/}
+ echo "UBOOT Bootloader: ${UBOOT}"
+}
+
 function boot_files_template {
 
 mkdir -p ${TEMPDIR}/
@@ -190,38 +219,6 @@ fi
   sed -i 's/bootargs/bootargs earlyprintk/g' ${TEMPDIR}/boot.cmd
  fi
 
-}
-
-function dl_bootloader {
-
- echo ""
- echo "Downloading Bootloader"
- echo ""
-
- mkdir -p ${TEMPDIR}/dl/${DIST}
- mkdir -p ${DIR}/dl/${DIST}
-
- wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}tools/latest/bootloader
-
- if [ "$BETA_BOOT" ];then
-  ABI="ABX"
- else
-  ABI="ABI"
- fi
-
-if [ "${SPL_BOOT}" ] ; then
- MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:MLO" | awk '{print $2}')
-fi
-
-UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:UBOOT" | awk '{print $2}')
-
-if [ "${SPL_BOOT}" ] ; then
- wget -c --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MLO}
- MLO=${MLO##*/}
-fi
-
- wget -c --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${UBOOT}
- UBOOT=${UBOOT##*/}
 }
 
 function dl_root_image {
@@ -926,9 +923,12 @@ if [ "$IN_VALID_UBOOT" ] ; then
 fi
 
  find_issue
+ detect_software
+ dl_bootloader
+
+
  boot_files_template
  set_defaults
- dl_bootloader
  dl_root_image
  dl_kernel_image
  dl_firmware
