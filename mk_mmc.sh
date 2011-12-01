@@ -243,6 +243,32 @@ esac
  fi
 }
 
+function dl_firmware {
+ echo ""
+ echo "Downloading Firmware"
+ echo "-----------------------------"
+
+ #TODO: We should just use the git tree blobs over distro versions
+ if ! ls ${GIT_DIR}/dl/linux-firmware/.git/ >/dev/null 2>&1;then
+  cd ${DIR}/dl/
+  git clone git://git.kernel.org/pub/scm/linux/kernel/git/dwmw2/linux-firmware.git
+  cd ${DIR}/
+ else
+  cd ${DIR}/dl/linux-firmware
+  git pull
+  cd ${DIR}/
+ fi
+
+case "$DIST" in
+    f13)
+	#V3.1 needs 1.9.4 for ar9170
+	#wget -c --directory-prefix=${DIR}/dl/${DIST} http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+	wget -c --directory-prefix=${DIR}/dl/${DIST} http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+	AR9170_FW="carl9170-1.fw"
+        ;;
+esac
+}
+
 function boot_files_template {
 
 mkdir -p ${TEMPDIR}/
@@ -296,36 +322,6 @@ fi
  fi
 
 }
-
-function dl_firmware {
-
-if [ "${FIRMWARE}" ] ; then
-
- echo ""
- echo "Downloading Firmware"
- echo ""
-
-if ls ${DIR}/dl/linux-firmware/.git/ >/dev/null 2>&1;then
- cd ${DIR}/dl/linux-firmware
- git pull
- cd -
-else
- cd ${DIR}/dl/
- git clone git://git.infradead.org/users/dwmw2/linux-firmware.git
- #git clone git://git.kernel.org/pub/scm/linux/kernel/git/dwmw2/linux-firmware.git
- cd -
-fi
-
-case "$DIST" in
-    f13)
-	echo "nothing yet"
-        ;;
-esac
-
-fi
-
-}
-
 
 function prepare_initrd {
  mkdir -p ${TEMPDIR}/initrd-tree
@@ -928,13 +924,14 @@ fi
  dl_kernel_image
  dl_root_image
 
+if [ "${FIRMWARE}" ] ; then
+ dl_firmware
+fi
+
 
 exit
  boot_files_template
  set_defaults
- dl_root_image
- dl_kernel_image
- dl_firmware
 
  umount_partitions
  boot_partition
