@@ -725,6 +725,25 @@ if [ "$BTRFS_FSTAB" ] ; then
  sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
 fi
 
+cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<serial_console
+start on stopped rc RUNLEVEL=[2345]
+stop on starting runlevel [016]
+
+respawn
+exec /sbin/agetty /dev/ttyO2 115200
+serial_console
+
+#So most of the default images use ttyO2, but the bone uses ttyO0, need to find a better way..
+if test "-$SERIAL-" != "-ttyO2-"
+then
+ if ls ${TEMPDIR}/disk/etc/init/ttyO2.conf >/dev/null 2>&1;then
+  echo "Fedora: Serial Login: fixing /etc/init/ttyO2.conf to use ${SERIAL}"
+  echo "-----------------------------"
+  mv ${TEMPDIR}/disk/etc/init/ttyO2.conf ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
+  sed -i -e 's:ttyO2:'$SERIAL':g' ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
+ fi
+fi
+
  if [ "$CREATE_SWAP" ] ; then
 
   echo "-----------------------------"
