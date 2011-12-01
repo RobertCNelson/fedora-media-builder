@@ -284,7 +284,7 @@ setenv console SERIAL_CONSOLE
 setenv optargs VIDEO_CONSOLE
 setenv mmcroot /dev/mmcblk0p2 ro
 setenv mmcrootfstype FINAL_FSTYPE rootwait fixrtc
-setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; fatload mmc 0:1 UINITRD_ADDR uInitrd; bootm UIMAGE_ADDR UINITRD_ADDR'
+setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; bootm UIMAGE_ADDR'
 setenv bootargs console=\${console} \${optargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay}
 boot
 boot_cmd
@@ -331,7 +331,7 @@ mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
 #dvi->defaultdisplay
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     beagle)
@@ -345,7 +345,7 @@ mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
 #dvi->defaultdisplay
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     bone)
@@ -356,7 +356,7 @@ mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
 
 mmc_args=run bootargs_defaults;setenv bootargs \${bootargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} ip=\${ip_method}
 
-mmc_load_uimage=run rcn_mmcloaduimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage} \${address_uinitrd}
+mmc_load_uimage=run rcn_mmcloaduimage; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
 esac
@@ -604,11 +604,13 @@ function populate_boot {
  VMLINUZ="vmlinuz-*"
  UIMAGE="uImage"
 
- if [ -f ${TEMPDIR}/kernel/${VMLINUZ} ]; then
-  LINUX_VER=$(ls ${TEMPDIR}/kernel/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
+ ls ${TEMPDIR}/kernel/boot/
+
+ if [ -f ${TEMPDIR}/kernel/boot/${VMLINUZ} ]; then
+  LINUX_VER=$(ls ${TEMPDIR}/kernel/boot/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
   echo "Using mkimage to create uImage"
   echo "-----------------------------"
-  mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/${VMLINUZ} ${TEMPDIR}/disk/${UIMAGE}
+  mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/${UIMAGE}
  fi
 
 if [ "$DO_UBOOT" ];then
@@ -689,32 +691,45 @@ else
 fi
 }
 
-function copy_rootfs_files {
+function populate_rootfs {
 
-if sudo mount -t ${RFS} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
+ echo "Populating rootfs Partition"
+ echo "Please be patient, this may take a few minutes, as its transfering a lot of files.."
+ echo "-----------------------------"
+
+ partprobe ${MMC}
+
+ if mount -t ${RFS} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
  if ls ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} >/dev/null 2>&1;then
    pv ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+   echo "Transfer of Base Rootfs Complete, syncing to disk"
+   echo "-----------------------------"
  fi
 
- sudo dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/disk/
+ #FIXME:
+ DIST=squeeze
+ dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/disk/
+ #FIXME:
+ DIST=f13
 
- sudo sed -i 's/root/mmcblk2/g' ${TEMPDIR}/disk/etc/fstab
- sudo sed -i 's:nfs:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
+ sed -i 's/root/mmcblk2/g' ${TEMPDIR}/disk/etc/fstab
+ sed -i 's:nfs:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
 
 if [ "$BTRFS_FSTAB" ] ; then
- sudo sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
+ sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
 fi
 
  if [ "$CREATE_SWAP" ] ; then
 
-  echo ""
+  echo "-----------------------------"
   echo "Extra: Creating SWAP File"
-  echo ""
+  echo "-----------------------------"
   echo "SWAP BUG creation note:"
   echo "IF this takes a long time(>= 5mins) open another terminal and run dmesg"
   echo "if theres a nasty error, ctrl-c/reboot and try again... its an annoying bug.."
-  echo ""
+  echo "Background: usually occured in days before Ubuntu Lucid.."
+  echo "-----------------------------"
 
   SPACE_LEFT=$(df ${TEMPDIR}/disk/ | grep ${MMC}${PARTITION_PREFIX}2 | awk '{print $4}')
 
@@ -733,41 +748,31 @@ fi
  sync
  sync
  cd ${DIR}/
- sudo umount ${TEMPDIR}/disk || true
 
- echo ""
- echo "Finished populating Boot Partition"
+ umount ${TEMPDIR}/disk || true
+
+ echo "Finished populating rootfs Partition"
+ echo "-----------------------------"
 else
- echo ""
- echo "Unable to mount ${MMC}${PARTITION_PREFIX}1 at ${TEMPDIR}/disk to complete populating Boot Partition"
+ echo "-----------------------------"
+ echo "Unable to mount ${MMC}${PARTITION_PREFIX}2 at ${TEMPDIR}/disk to complete populating rootfs Partition"
  echo "Please retry running the script, sometimes rebooting your system helps."
- echo ""
+ echo "-----------------------------"
  exit
 fi
-
-}
-
-function reset_scripts {
-
- #Setup serial
- sed -i -e 's:'$SERIAL':SERIAL:g' ${DIR}/scripts/serial.conf
- sed -i -e 's:'$SERIAL':SERIAL:g' ${DIR}/scripts/*-tweaks.diff
-
- if [ "$SMSC95XX_MOREMEM" ];then
-  sed -i 's/16384/8192/g' ${DIR}/scripts/*.diff
- fi
-
+ echo "mk_mmc.sh script complete"
 }
 
 function check_mmc {
- FDISK=$(sudo LC_ALL=C fdisk -l 2>/dev/null | grep "[Disk] ${MMC}" | awk '{print $2}')
+
+ FDISK=$(LC_ALL=C fdisk -l 2>/dev/null | grep "[Disk] ${MMC}" | awk '{print $2}')
 
  if test "-$FDISK-" = "-$MMC:-"
  then
   echo ""
   echo "I see..."
-  echo "sudo fdisk -l:"
-  sudo LC_ALL=C fdisk -l 2>/dev/null | grep "[Disk] /dev/" --color=never
+  echo "fdisk -l:"
+  LC_ALL=C fdisk -l 2>/dev/null | grep "[Disk] /dev/" --color=never
   echo ""
   echo "mount:"
   mount | grep -v none | grep "/dev/" --color=never
@@ -779,8 +784,8 @@ function check_mmc {
   echo ""
   echo "Are you sure? I Don't see [${MMC}], here is what I do see..."
   echo ""
-  echo "sudo fdisk -l:"
-  sudo LC_ALL=C fdisk -l 2>/dev/null | grep "[Disk] /dev/" --color=never
+  echo "fdisk -l:"
+  LC_ALL=C fdisk -l 2>/dev/null | grep "[Disk] /dev/" --color=never
   echo ""
   echo "mount:"
   mount | grep -v none | grep "/dev/" --color=never
@@ -1044,6 +1049,10 @@ Required Options:
     (freescale)
     mx53loco
 
+--addon <device>
+    pico
+    ulcd <beagle xm>
+
 Optional:
 --distro <distro>
     Fedora:
@@ -1194,30 +1203,12 @@ fi
  dl_kernel_image
  dl_root_image
 
-if [ "${FIRMWARE}" ] ; then
- dl_firmware
+if [ "$DO_UBOOT" ];then
+ setup_bootscripts
 fi
 
- setup_bootscripts
  extract_zimage
-
  unmount_all_drive_partitions
  create_partitions
  populate_boot
-
-exit
- boot_files_template
- set_defaults
-
- umount_partitions
- boot_partition
- root_partition
- umount_partitions
- format_partitions
-
- copy_boot_files
- copy_rootfs_files
-
-# create_partitions
-# reset_scripts
-
+ populate_rootfs
