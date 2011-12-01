@@ -37,6 +37,9 @@ unset DD_UBOOT
 unset KERNEL_DEB
 unset USE_UENV
 
+unset SVIDEO_NTSC
+unset SVIDEO_PAL
+
 SCRIPT_VERSION="1.11"
 IN_VALID_UBOOT=1
 
@@ -273,24 +276,13 @@ esac
 
 function boot_files_template {
 
-cat > ${TEMPDIR}/bootscripts/netinstall.cmd <<netinstall_boot_cmd
-setenv defaultdisplay VIDEO_OMAPFB_MODE
-setenv dvimode VIDEO_TIMING
-setenv vram 12MB
-setenv console DICONSOLE
-setenv mmcroot /dev/ram0 rw
-setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage.net; fatload mmc 0:1 UINITRD_ADDR uInitrd.net; bootm UIMAGE_ADDR UINITRD_ADDR'
-setenv bootargs console=\${console} root=\${mmcroot} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay}
-boot
-netinstall_boot_cmd
-
 cat > ${TEMPDIR}/bootscripts/boot.cmd <<boot_cmd
 setenv defaultdisplay VIDEO_OMAPFB_MODE
 setenv dvimode VIDEO_TIMING
 setenv vram 12MB
 setenv console SERIAL_CONSOLE
 setenv optargs VIDEO_CONSOLE
-setenv mmcroot FINAL_PART ro
+setenv mmcroot /dev/mmcblk0p2 ro
 setenv mmcrootfstype FINAL_FSTYPE rootwait fixrtc
 setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; fatload mmc 0:1 UINITRD_ADDR uInitrd; bootm UIMAGE_ADDR UINITRD_ADDR'
 setenv bootargs console=\${console} \${optargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay}
@@ -312,21 +304,6 @@ uenv_boot_cmd
 function boot_uenv_txt_template {
 #(rcn-ee)in a way these are better then boot.scr, but each target is going to have a slightly different entry point..
 
-cat > ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_generic_netinstall_cmd
-bootfile=uImage.net
-bootinitrd=uInitrd.net
-address_uimage=UIMAGE_ADDR
-address_uinitrd=UINITRD_ADDR
-
-console=DICONSOLE
-
-defaultdisplay=VIDEO_OMAPFB_MODE
-dvimode=VIDEO_TIMING
-
-mmcroot=/dev/ram0 rw
-uenv_generic_netinstall_cmd
-
-
 cat > ${TEMPDIR}/bootscripts/normal.cmd <<uenv_generic_normalboot_cmd
 bootfile=uImage
 bootinitrd=uInitrd
@@ -338,23 +315,13 @@ console=SERIAL_CONSOLE
 defaultdisplay=VIDEO_OMAPFB_MODE
 dvimode=VIDEO_TIMING
 
-mmcroot=FINAL_PART ro
+mmcroot=/dev/mmcblk0p2 ro
 mmcrootfstype=FINAL_FSTYPE rootwait fixrtc
 uenv_generic_normalboot_cmd
 
 case "$SYSTEM" in
     beagle_bx)
 
-cat >> ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_netinstall_cmd
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
-#dvi->defaultdisplay
-mmcargs=setenv bootargs console=\${console} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot}
-
-loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
-uenv_netinstall_cmd
-
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
@@ -364,21 +331,11 @@ mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
 #dvi->defaultdisplay
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+loaduimage=run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
         ;;
     beagle)
 
-cat >> ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_netinstall_cmd
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
-#dvi->defaultdisplay
-mmcargs=setenv bootargs console=\${console} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot}
-
-loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
-uenv_netinstall_cmd
-
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
@@ -388,19 +345,10 @@ mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
 #dvi->defaultdisplay
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+loaduimage=run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
         ;;
     bone)
-
-cat >> ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_netinstall_cmd
-rcn_mmcloaduimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
-mmc_args=run bootargs_defaults;setenv bootargs \${bootargs} root=\${mmcroot}
-
-mmc_load_uimage=printenv; run rcn_mmcloaduimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage} \${address_uinitrd}
-uenv_netinstall_cmd
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 rcn_mmcloaduimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
@@ -448,10 +396,13 @@ function tweak_boot_scripts {
  #Set the Serial Console
  sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/*.cmd
 
+ #Set filesystem type
+ sed -i -e 's:FINAL_FSTYPE:'$RFS':g' ${TEMPDIR}/bootscripts/*.cmd
+
 if [ "$SERIAL_MODE" ];then
  #console=CONSOLE
  #Set the Serial Console
- sed -i -e 's:DICONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/*.cmd
+ sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/*.cmd
 
  #omap3/4 DSS:
  #VIDEO_RAM
@@ -465,7 +416,6 @@ if [ "$SERIAL_MODE" ];then
 
 else
  #Set the Video Console
- sed -i -e 's:DICONSOLE:tty0:g' ${TEMPDIR}/bootscripts/*.cmd
  sed -i -e 's:VIDEO_CONSOLE:console=tty0:g' ${TEMPDIR}/bootscripts/*.cmd
 
  #omap3/4 DSS:
@@ -499,55 +449,49 @@ function setup_bootscripts {
  fi
 }
 
-function prepare_initrd {
- mkdir -p ${TEMPDIR}/initrd-tree
- cd ${TEMPDIR}/initrd-tree
- sudo zcat ${DIR}/dl/${DIST}/initrd.gz | sudo cpio -i -d
- sudo dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/initrd-tree
- cd ${DIR}/
-
- sudo mkdir -p ${TEMPDIR}/initrd-tree/lib/firmware/
-
-
-
- sudo touch ${TEMPDIR}/initrd-tree/etc/rcn.conf
-
- #work around for the kevent smsc95xx issue
- sudo touch ${TEMPDIR}/initrd-tree/etc/sysctl.conf
- if [ "$SMSC95XX_MOREMEM" ];then
-  echo "vm.min_free_kbytes = 16384" | sudo tee -a ${TEMPDIR}/initrd-tree/etc/sysctl.conf
+function extract_zimage {
+ mkdir -p ${TEMPDIR}/kernel
+ echo "Extracting Kernel Boot Image"
+ #FIXME
+ DIST=squeeze
+ if [ ! "${DI_BROKEN_USE_CROSS}" ] ; then
+  dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/kernel
  else
-  echo "vm.min_free_kbytes = 8192" | sudo tee -a ${TEMPDIR}/initrd-tree/etc/sysctl.conf
+  dpkg -x ${DIR}/dl/${DIST}/${CROSS_DEB_FILE} ${TEMPDIR}/kernel
  fi
-
- cd ${TEMPDIR}/initrd-tree/
- find . | cpio -o -H newc | gzip -9 > ${TEMPDIR}/initrd.mod.gz
- cd ${DIR}/
+ #FIXME
+ DIST=f13
 }
 
-function umount_partitions {
-
+function unmount_all_drive_partitions {
  echo ""
- echo "Umounting Partitions"
- echo ""
+ echo "Unmounting Partitions"
+ echo "-----------------------------"
 
-NUM_MOUNTS=$(mount | grep -v none | grep "$MMC" | wc -l)
+ NUM_MOUNTS=$(mount | grep -v none | grep "$MMC" | wc -l)
 
  for (( c=1; c<=$NUM_MOUNTS; c++ ))
  do
   DRIVE=$(mount | grep -v none | grep "$MMC" | tail -1 | awk '{print $1}')
-  sudo umount ${DRIVE} &> /dev/null || true
+  umount ${DRIVE} &> /dev/null || true
  done
 
+ parted --script ${MMC} mklabel msdos
 }
 
-function omap_uboot_in_fat {
+function uboot_in_boot_partition {
+ echo ""
+ echo "Using fdisk to create BOOT Partition"
+ echo "-----------------------------"
 
-echo ""
-echo "Setting up Omap Boot Partition"
-echo ""
+ #With util-linux, 2.18.x/2.19.x, fdisk no longer has dos/cylinders mode on by default
+ unset FDISK_DOS
 
-sudo fdisk ${FDISK_DOS} ${MMC} << END
+ if test $(fdisk -v | grep -o -E '2\.[0-9]+' | cut -d'.' -f2) -ge 18 ; then
+  FDISK_DOS="-c=dos -u=cylinders"
+ fi
+
+fdisk ${FDISK_DOS} ${MMC} << END
 n
 p
 1
@@ -559,112 +503,190 @@ p
 w
 END
 
-sync
+ sync
 
-sudo parted --script ${MMC} set 1 boot on
+ echo "Setting Boot Partition's Boot Flag"
+ echo "-----------------------------"
+ parted --script ${MMC} set 1 boot on
 
+if [ "$FDISK_DEBUG" ];then
+ echo "Debug: Partition 1 layout:"
+ echo "-----------------------------"
+ fdisk -l ${MMC}
+ echo "-----------------------------"
+fi
 }
 
-function imx_dd_uboot {
+function dd_uboot_before_boot_partition {
+ echo ""
+ echo "Using dd to place bootloader before BOOT Partition"
+ echo "-----------------------------"
+ dd if=${TEMPDIR}/dl/${UBOOT} of=${MMC} seek=1 bs=1024
 
-echo ""
-echo "Setting up Imx Boot Partition"
-echo ""
-
-sudo dd if=${TEMPDIR}/dl/${UBOOT} of=${MMC} seek=1 bs=1024
-
-#for now, lets default to fat16
-sudo parted --script ${PARTED_ALIGN} ${MMC} mkpart primary fat16 10 100
-
+ #For now, lets default to fat16, but this could be ext2/3/4
+ echo "Using parted to create BOOT Partition"
+ echo "-----------------------------"
+ parted --script ${PARTED_ALIGN} ${MMC} mkpart primary fat16 10 100
+ #parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ext3 10 100
 }
 
-function boot_partition {
+function calculate_rootfs_partition {
+ echo "Creating rootfs ${RFS} Partition"
+ echo "-----------------------------"
 
-sudo parted --script ${MMC} mklabel msdos
- 
-if [ "${DO_UBOOT_DD}" ] ; then
- imx_dd_uboot
+ unset END_BOOT
+ END_BOOT=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep primary | awk '{print $3}' | cut -d "M" -f1)
+
+ unset END_DEVICE
+ END_DEVICE=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep Free | tail -n 1 | awk '{print $2}' | cut -d "M" -f1)
+
+ parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${RFS} ${END_BOOT} ${END_DEVICE}
+ sync
+
+ if [ "$FDISK_DEBUG" ];then
+  echo "Debug: ${RFS} Partition"
+  echo "-----------------------------"
+  echo "parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${RFS} ${END_BOOT} ${END_DEVICE}"
+  fdisk -l ${MMC}
+ fi
+}
+
+function format_boot_partition {
+ echo "Formating Boot Partition"
+ echo "-----------------------------"
+ mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
+}
+
+function format_rootfs_partition {
+ echo "Formating rootfs Partition as ${RFS}"
+ echo "-----------------------------"
+ mkfs.${RFS} ${MMC}${PARTITION_PREFIX}2 -L ${RFS_LABEL}
+}
+
+function create_partitions {
+
+if [ "${DD_UBOOT}" ] ; then
+ dd_uboot_before_boot_partition
 else
- omap_uboot_in_fat 
+ uboot_in_boot_partition
 fi
 
+ calculate_rootfs_partition
+ format_boot_partition
+ format_rootfs_partition
 }
 
-function root_partition {
+function populate_boot {
+ echo "Populating Boot Partition"
+ echo "-----------------------------"
 
-echo ""
-echo "Setting up Root Partition"
-echo ""
+ partprobe ${MMC}
+ mkdir -p ${TEMPDIR}/disk
 
-unset END_BOOT
-END_BOOT=$(LC_ALL=C sudo parted -s ${MMC} unit mb print free | grep primary | awk '{print $3}' | cut -d "M" -f1)
+ if mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
 
-unset END_DEVICE
-END_DEVICE=$(LC_ALL=C sudo parted -s ${MMC} unit mb print free | grep Free | tail -n 1 | awk '{print $2}' | cut -d "M" -f1)
-
-sudo parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${RFS} ${END_BOOT} ${END_DEVICE}
-sync
-
-}
-
-function format_partitions {
-
-echo ""
-echo "Setting up Root Partition"
-echo ""
-
-sudo mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
-sudo mkfs.${RFS} ${MMC}${PARTITION_PREFIX}2 -L ${RFS_LABEL}
-
-}
-
-function copy_boot_files {
-
-mkdir -p ${TEMPDIR}/disk
-
-if sudo mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
-
-if [ "${SPL_BOOT}" ] ; then
- if ls ${TEMPDIR}/dl/${MLO} >/dev/null 2>&1;then
-  sudo cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/MLO
- fi
-fi
-
-if [ ! "${DO_UBOOT_DD}" ] ; then
- if ls ${TEMPDIR}/dl/${UBOOT} >/dev/null 2>&1;then
-  if echo ${UBOOT} | grep img > /dev/null 2>&1;then
-   sudo cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.img
-  else
-   sudo cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.bin
+  if [ "${SPL_BOOT}" ] ; then
+   if [ -f ${TEMPDIR}/dl/${MLO} ]; then
+    cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/MLO
+   fi
   fi
+
+  if [ ! "${DD_UBOOT}" ] ; then
+   if [ -f ${TEMPDIR}/dl/${UBOOT} ]; then
+    if echo ${UBOOT} | grep img > /dev/null 2>&1;then
+     cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.img
+    else
+     cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.bin
+    fi
+   fi
+  fi
+
+ VMLINUZ="vmlinuz-*"
+ UIMAGE="uImage"
+
+ if [ -f ${TEMPDIR}/kernel/${VMLINUZ} ]; then
+  LINUX_VER=$(ls ${TEMPDIR}/kernel/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
+  echo "Using mkimage to create uImage"
+  echo "-----------------------------"
+  mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/${VMLINUZ} ${TEMPDIR}/disk/${UIMAGE}
  fi
+
+if [ "$DO_UBOOT" ];then
+
+if [ "${USE_UENV}" ] ; then
+ echo "Copying uEnv.txt based boot scripts to Boot Partition"
+ echo "-----------------------------"
+ cp -v ${TEMPDIR}/bootscripts/normal.cmd ${TEMPDIR}/disk/uEnv.txt
+ cat  ${TEMPDIR}/bootscripts/normal.cmd
+ echo "-----------------------------"
+else
+ echo "Copying boot.scr based boot scripts to Boot Partition"
+ echo "-----------------------------"
+ cp -v ${TEMPDIR}/bootscripts/uEnv.cmd ${TEMPDIR}/disk/uEnv.txt
+ cat ${TEMPDIR}/bootscripts/uEnv.cmd
+ echo "-----------------------------"
+ mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d ${TEMPDIR}/bootscripts/boot.cmd ${TEMPDIR}/disk/boot.scr
+ cp -v ${TEMPDIR}/bootscripts/boot.cmd ${TEMPDIR}/disk/boot.cmd
+ cat ${TEMPDIR}/bootscripts/boot.cmd
+ echo "-----------------------------"
+fi
 fi
 
-mkdir -p ${TEMPDIR}/kernel
-sudo dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/kernel
-sudo mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${KERNEL} -d ${TEMPDIR}/kernel/boot/vmlinuz-* ${TEMPDIR}/disk/uImage
+cat > ${TEMPDIR}/readme.txt <<script_readme
 
-echo "boot.cmd"
-cat ${TEMPDIR}/boot.cmd
-sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d ${TEMPDIR}/boot.cmd ${TEMPDIR}/disk/boot.scr
-sudo cp -v ${TEMPDIR}/uEnv.cmd ${TEMPDIR}/disk/uEnv.txt
-sudo cp -v ${TEMPDIR}/boot.cmd ${TEMPDIR}/disk/boot.cmd
+These can be run from anywhere, but just in case change to "cd /boot/uboot"
+
+Tools:
+
+ "./tools/update_boot_files.sh"
+
+Updated with a custom uImage and modules or modified the boot.cmd/user.com files with new boot args? Run "./tools/update_boot_files.sh" to regenerate all boot files...
+
+script_readme
+
+cat > ${TEMPDIR}/update_boot_files.sh <<update_boot_files
+#!/bin/sh
+
+cd /boot/uboot
+sudo mount -o remount,rw /boot/uboot
+
+if ! ls /boot/initrd.img-\$(uname -r) >/dev/null 2>&1;then
+sudo update-initramfs -c -k \$(uname -r)
+else
+sudo update-initramfs -u -k \$(uname -r)
+fi
+
+if ls /boot/initrd.img-\$(uname -r) >/dev/null 2>&1;then
+sudo mkimage -A arm -O linux -T ramdisk -C none -a 0 -e 0 -n initramfs -d /boot/initrd.img-\$(uname -r) /boot/uboot/uInitrd
+fi
+
+if ls /boot/uboot/boot.cmd >/dev/null 2>&1;then
+sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d /boot/uboot/boot.cmd /boot/uboot/boot.scr
+fi
+if ls /boot/uboot/serial.cmd >/dev/null 2>&1;then
+sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d /boot/uboot/serial.cmd /boot/uboot/boot.scr
+fi
+sudo cp /boot/uboot/boot.scr /boot/uboot/boot.ini
+if ls /boot/uboot/user.cmd >/dev/null 2>&1;then
+sudo mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Reset Nand" -d /boot/uboot/user.cmd /boot/uboot/user.scr
+fi
+
+update_boot_files
 
 cd ${TEMPDIR}/disk
 sync
 cd ${DIR}/
-sudo umount ${TEMPDIR}/disk || true
+umount ${TEMPDIR}/disk || true
 
- echo ""
  echo "Finished populating Boot Partition"
+ echo "-----------------------------"
 else
- echo ""
+ echo "-----------------------------"
  echo "Unable to mount ${MMC}${PARTITION_PREFIX}1 at ${TEMPDIR}/disk to complete populating Boot Partition"
  echo "Please retry running the script, sometimes rebooting your system helps."
- echo ""
+ echo "-----------------------------"
  exit
 fi
-
 }
 
 function copy_rootfs_files {
@@ -1177,6 +1199,11 @@ if [ "${FIRMWARE}" ] ; then
 fi
 
  setup_bootscripts
+ extract_zimage
+
+ unmount_all_drive_partitions
+ create_partitions
+ populate_boot
 
 exit
  boot_files_template
