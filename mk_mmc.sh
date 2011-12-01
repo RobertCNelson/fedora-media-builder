@@ -57,6 +57,17 @@ F13_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
 DIR=$PWD
 TEMPDIR=$(mktemp -d)
 
+function check_root {
+if [[ $UID -ne 0 ]]; then
+ echo "$0 must be run as sudo user or root"
+ exit
+fi
+}
+
+function find_issue {
+
+check_root
+
 #Software Qwerks
 #fdisk 2.18.x/2.19.x, dos no longer default
 unset FDISK_DOS
@@ -67,15 +78,16 @@ fi
 
 #Check for gnu-fdisk
 #FIXME: GNU Fdisk seems to halt at "Using /dev/xx" when trying to script it..
-if sudo fdisk -v | grep "GNU Fdisk" >/dev/null ; then
+if fdisk -v | grep "GNU Fdisk" >/dev/null ; then
  echo "Sorry, this script currently doesn't work with GNU Fdisk"
  exit
 fi
 
 unset PARTED_ALIGN
-if sudo parted -v | grep parted | grep 2.[1-3] >/dev/null ; then
+if parted -v | grep parted | grep 2.[1-3] >/dev/null ; then
  PARTED_ALIGN="--align cylinder"
 fi
+}
 
 function detect_software {
 
@@ -913,6 +925,7 @@ if [ "$IN_VALID_UBOOT" ] ; then
     usage
 fi
 
+ find_issue
  boot_files_template
  set_defaults
  dl_bootloader
