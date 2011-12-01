@@ -39,8 +39,10 @@ unset KERNEL_DEB
 SCRIPT_VERSION="1.11"
 IN_VALID_UBOOT=1
 
-RFS=ext4
 MIRROR="http://rcn-ee.net/deb/"
+
+#Defaults
+RFS=ext4
 DIST=f13
 
 BOOT_LABEL=boot
