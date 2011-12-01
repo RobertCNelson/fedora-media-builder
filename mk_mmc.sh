@@ -604,8 +604,6 @@ function populate_boot {
  VMLINUZ="vmlinuz-*"
  UIMAGE="uImage"
 
- ls ${TEMPDIR}/kernel/boot/
-
  if [ -f ${TEMPDIR}/kernel/boot/${VMLINUZ} ]; then
   LINUX_VER=$(ls ${TEMPDIR}/kernel/boot/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
   echo "Using mkimage to create uImage"
