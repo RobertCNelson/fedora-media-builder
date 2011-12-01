@@ -214,6 +214,35 @@ function dl_kernel_image {
  echo "Using: ${ACTUAL_DEB_FILE}"
 }
 
+function dl_root_image {
+
+ echo ""
+ echo "Downloading Fedora Root Image"
+ echo "-----------------------------"
+
+case "$DIST" in
+    f13)
+	ROOTFS_MD5SUM=$F13_MD5SUM
+	ROOTFS_IMAGE=$F13_IMAGE
+        ;;
+esac
+
+ if [ -f ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} ]; then
+  MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
+  if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
+    echo "Note: md5sum has changed: $MD5SUM"
+    echo "-----------------------------"
+    rm -f ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} || true
+    wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+    NEW_MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
+    echo "Note: new md5sum $NEW_MD5SUM"
+    echo "-----------------------------"
+  fi
+ else
+  wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+ fi
+}
+
 function boot_files_template {
 
 mkdir -p ${TEMPDIR}/
@@ -265,34 +294,6 @@ fi
  if [ "$PRINTK" ];then
   sed -i 's/bootargs/bootargs earlyprintk/g' ${TEMPDIR}/boot.cmd
  fi
-
-}
-
-function dl_root_image {
-
-echo ""
-echo "Downloading Fedora Root Image"
-echo ""
-
-case "$DIST" in
-    f13)
-	ROOTFS_MD5SUM=$F13_MD5SUM
-	ROOTFS_IMAGE=$F13_IMAGE
-        ;;
-esac
-
-if ls ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} >/dev/null 2>&1;then
-  MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
-  if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
-    echo "md5sum changed $MD5SUM"
-    rm -f ${DIR}/dl/${DIST}/initrd.gz || true
-    wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-    NEW_MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
-    echo "new md5sum $NEW_MD5SUM"
-  fi
-else
-  wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-fi
 
 }
 
@@ -925,8 +926,10 @@ fi
  detect_software
  dl_bootloader
  dl_kernel_image
+ dl_root_image
 
 
+exit
  boot_files_template
  set_defaults
  dl_root_image
