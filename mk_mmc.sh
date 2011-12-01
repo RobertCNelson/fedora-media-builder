@@ -46,8 +46,9 @@ IN_VALID_UBOOT=1
 MIRROR="http://rcn-ee.net/deb/"
 
 #Defaults
-RFS=ext3
+RFS=ext4
 DIST=f13
+ACTUAL_DIST=f13
 
 BOOT_LABEL=boot
 RFS_LABEL=rootfs
@@ -57,6 +58,9 @@ FEDORA_MIRROR="http://scotland.proximity.on.ca/fedora-arm/rootfs/"
 
 F13_IMAGE="rootfs-f13-beta3-2011-05-10.tar.bz2"
 F13_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
+
+F14_IMAGE="f14-rootfs-2011-06-23.tar.bz2"
+F14_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
 
 DIR=$PWD
 TEMPDIR=$(mktemp -d)
@@ -187,9 +191,8 @@ function dl_kernel_image {
  fi
 
  #FIXME: use squeeze kernel for now
- DIST=squeeze
+ DIST=wheezy
  ARCH=armel
- DI_BROKEN_USE_CROSS=1
 
  if [ ! "${KERNEL_DEB}" ] ; then
   wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/LATEST-${SUBARCH}
@@ -213,7 +216,7 @@ function dl_kernel_image {
  fi
 
  #FIXME: reset back to fedora
- DIST=f13
+ DIST=${ACTUAL_DIST}
 
  echo "Using: ${ACTUAL_DEB_FILE}"
 }
@@ -228,6 +231,10 @@ case "$DIST" in
     f13)
 	ROOTFS_MD5SUM=$F13_MD5SUM
 	ROOTFS_IMAGE=$F13_IMAGE
+        ;;
+    f14)
+	ROOTFS_MD5SUM=$F14_MD5SUM
+	ROOTFS_IMAGE=$F14_IMAGE
         ;;
 esac
 
@@ -453,14 +460,14 @@ function extract_zimage {
  mkdir -p ${TEMPDIR}/kernel
  echo "Extracting Kernel Boot Image"
  #FIXME
- DIST=squeeze
+ DIST=wheezy
  if [ ! "${DI_BROKEN_USE_CROSS}" ] ; then
   dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/kernel
  else
   dpkg -x ${DIR}/dl/${DIST}/${CROSS_DEB_FILE} ${TEMPDIR}/kernel
  fi
  #FIXME
- DIST=f13
+ DIST=${ACTUAL_DIST}
 }
 
 function unmount_all_drive_partitions {
@@ -706,10 +713,10 @@ function populate_rootfs {
  fi
 
  #FIXME:
- DIST=squeeze
+ DIST=wheezy
  dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/disk/
  #FIXME:
- DIST=f13
+ DIST=${ACTUAL_DIST}
 
  sed -i 's/root/mmcblk2/g' ${TEMPDIR}/disk/etc/fstab
  sed -i 's:nfs:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
@@ -959,6 +966,22 @@ function check_distro {
  unset IN_VALID_DISTRO
  fi
 
+ if test "-$DISTRO_TYPE-" = "-f13-"
+ then
+ DIST=f13
+ ARCH=armel
+ unset DI_BROKEN_USE_CROSS
+ unset IN_VALID_DISTRO
+ fi
+
+ if test "-$DISTRO_TYPE-" = "-f14-"
+ then
+ DIST=f14
+ ARCH=armel
+ unset DI_BROKEN_USE_CROSS
+ unset IN_VALID_DISTRO
+ fi
+
 # if test "-$DISTRO_TYPE-" = "-sid-"
 # then
 # DIST=sid
@@ -1055,6 +1078,7 @@ Optional:
 --distro <distro>
     Fedora:
       f13 <default>
+      f14
 
 --rootfs <fs_type>
     ext3
