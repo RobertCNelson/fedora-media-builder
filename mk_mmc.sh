@@ -30,7 +30,7 @@ unset BETA_KERNEL
 unset EXPERIMENTAL_KERNEL
 unset USB_ROOTFS
 unset PRINTK
-unset HASMLO
+unset SPL_BOOT
 unset ABI_VER
 unset SMSC95XX_MOREMEM
 unset DO_UBOOT_DD
@@ -197,13 +197,13 @@ function dl_bootloader {
   ABI="ABI"
  fi
 
-if [ "${HASMLO}" ] ; then
+if [ "${SPL_BOOT}" ] ; then
  MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:MLO" | awk '{print $2}')
 fi
 
 UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:UBOOT" | awk '{print $2}')
 
-if [ "${HASMLO}" ] ; then
+if [ "${SPL_BOOT}" ] ; then
  wget -c --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MLO}
  MLO=${MLO##*/}
 fi
@@ -443,7 +443,7 @@ mkdir -p ${TEMPDIR}/disk
 
 if sudo mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
 
-if [ "${HASMLO}" ] ; then
+if [ "${SPL_BOOT}" ] ; then
  if ls ${TEMPDIR}/dl/${MLO} >/dev/null 2>&1;then
   sudo cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/MLO
  fi
@@ -587,7 +587,7 @@ function check_mmc {
 }
 
 function is_omap {
- HASMLO=1
+ SPL_BOOT=1
  UIMAGE_ADDR="0x80300000"
  UINITRD_ADDR="0x81600000"
  SERIAL_CONSOLE="${SERIAL},115200n8"
