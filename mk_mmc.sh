@@ -47,8 +47,12 @@ MIRROR="http://rcn-ee.net/deb/"
 
 #Defaults
 RFS=ext4
-DIST=f13
-ACTUAL_DIST=f13
+DIST="f13"
+ACTUAL_DIST="f13"
+ARCH="armel"
+USER="root"
+PASS="fedoraarm"
+
 
 BOOT_LABEL=boot
 RFS_LABEL=rootfs
@@ -746,6 +750,16 @@ then
  fi
 fi
 
+ echo "Fedora: Adding root login over serial: ${SERIAL} to /etc/securetty"
+ cat ${TEMPDIR}/disk/etc/securetty | grep ${SERIAL} || echo ${SERIAL} >> ${TEMPDIR}/disk/etc/securetty
+
+cat >> ${TEMPDIR}/disk/etc/rc.d/rc.sysinit <<add_depmod
+
+if [ ! -f /lib/modules/`uname -r`/modules.dep ]; then
+ /sbin/depmod -a
+fi
+add_depmod
+
  if [ "$CREATE_SWAP" ] ; then
 
   echo "-----------------------------"
@@ -787,6 +801,10 @@ else
  exit
 fi
  echo "mk_mmc.sh script complete"
+ echo "-----------------------------"
+ echo "Default user: ${USER}"
+ echo "Default pass: ${PASS}"
+ echo "-----------------------------"
 }
 
 function check_mmc {
@@ -989,8 +1007,11 @@ function check_distro {
 
  if test "-$DISTRO_TYPE-" = "-f13-"
  then
- DIST=f13
- ARCH=armel
+ DIST="f13"
+ ACTUAL_DIST="f13"
+ ARCH="armel"
+ USER="root"
+ PASS="fedoraarm"
  unset DI_BROKEN_USE_CROSS
  unset IN_VALID_DISTRO
  fi
@@ -998,16 +1019,13 @@ function check_distro {
  if test "-$DISTRO_TYPE-" = "-f14-"
  then
  DIST=f14
+ ACTUAL_DIST=f14
  ARCH=armel
+ USER="root"
+ PASS="fedoraarm"
  unset DI_BROKEN_USE_CROSS
  unset IN_VALID_DISTRO
  fi
-
-# if test "-$DISTRO_TYPE-" = "-sid-"
-# then
-# DIST=sid
-# unset IN_VALID_DISTRO
-# fi
 
  if [ "$IN_VALID_DISTRO" ] ; then
    usage
