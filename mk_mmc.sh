@@ -25,7 +25,7 @@
 unset MMC
 unset FIRMWARE
 unset SERIAL_MODE
-unset BETA_BOOT
+unset USE_BETA_BOOTLOADER
 unset BETA_KERNEL
 unset EXPERIMENTAL_KERNEL
 unset USB_ROOTFS
@@ -33,8 +33,9 @@ unset PRINTK
 unset SPL_BOOT
 unset ABI_VER
 unset SMSC95XX_MOREMEM
-unset DO_UBOOT_DD
+unset DD_UBOOT
 unset KERNEL_DEB
+unset USE_UENV
 
 SCRIPT_VERSION="1.11"
 IN_VALID_UBOOT=1
@@ -267,21 +268,40 @@ case "$DIST" in
 	AR9170_FW="carl9170-1.fw"
         ;;
 esac
+
 }
 
 function boot_files_template {
 
-mkdir -p ${TEMPDIR}/
-
-cat > ${TEMPDIR}/boot.cmd <<boot_cmd
+cat > ${TEMPDIR}/bootscripts/netinstall.cmd <<netinstall_boot_cmd
+setenv defaultdisplay VIDEO_OMAPFB_MODE
 setenv dvimode VIDEO_TIMING
 setenv vram 12MB
-setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; bootm UIMAGE_ADDR'
-setenv bootargs console=SERIAL_CONSOLE VIDEO_CONSOLE root=/dev/mmcblk0p2 rootwait ro VIDEO_RAM VIDEO_DEVICE:VIDEO_MODE fixrtc buddy=\${buddy} mpurate=\${mpurate}
+setenv console DICONSOLE
+setenv mmcroot /dev/ram0 rw
+setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage.net; fatload mmc 0:1 UINITRD_ADDR uInitrd.net; bootm UIMAGE_ADDR UINITRD_ADDR'
+setenv bootargs console=\${console} root=\${mmcroot} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay}
+boot
+netinstall_boot_cmd
+
+cat > ${TEMPDIR}/bootscripts/boot.cmd <<boot_cmd
+setenv defaultdisplay VIDEO_OMAPFB_MODE
+setenv dvimode VIDEO_TIMING
+setenv vram 12MB
+setenv console SERIAL_CONSOLE
+setenv optargs VIDEO_CONSOLE
+setenv mmcroot FINAL_PART ro
+setenv mmcrootfstype FINAL_FSTYPE rootwait fixrtc
+setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; fatload mmc 0:1 UINITRD_ADDR uInitrd; bootm UIMAGE_ADDR UINITRD_ADDR'
+setenv bootargs console=\${console} \${optargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay}
 boot
 boot_cmd
 
-cat > ${TEMPDIR}/uEnv.cmd <<uenv_boot_cmd
+}
+
+function boot_scr_to_uenv_txt {
+
+cat > ${TEMPDIR}/bootscripts/uEnv.cmd <<uenv_boot_cmd
 bootenv=boot.scr
 loaduimage=fatload mmc \${mmcdev} \${loadaddr} \${bootenv}
 mmcboot=echo Running boot.scr script from mmc ...; source \${loadaddr}
@@ -289,38 +309,194 @@ uenv_boot_cmd
 
 }
 
-function set_defaults {
+function boot_uenv_txt_template {
+#(rcn-ee)in a way these are better then boot.scr, but each target is going to have a slightly different entry point..
+
+cat > ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_generic_netinstall_cmd
+bootfile=uImage.net
+bootinitrd=uInitrd.net
+address_uimage=UIMAGE_ADDR
+address_uinitrd=UINITRD_ADDR
+
+console=DICONSOLE
+
+defaultdisplay=VIDEO_OMAPFB_MODE
+dvimode=VIDEO_TIMING
+
+mmcroot=/dev/ram0 rw
+uenv_generic_netinstall_cmd
+
+
+cat > ${TEMPDIR}/bootscripts/normal.cmd <<uenv_generic_normalboot_cmd
+bootfile=uImage
+bootinitrd=uInitrd
+address_uimage=UIMAGE_ADDR
+address_uinitrd=UINITRD_ADDR
+
+console=SERIAL_CONSOLE
+
+defaultdisplay=VIDEO_OMAPFB_MODE
+dvimode=VIDEO_TIMING
+
+mmcroot=FINAL_PART ro
+mmcrootfstype=FINAL_FSTYPE rootwait fixrtc
+uenv_generic_normalboot_cmd
+
+case "$SYSTEM" in
+    beagle_bx)
+
+cat >> ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_netinstall_cmd
+mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+#dvi->defaultdisplay
+mmcargs=setenv bootargs console=\${console} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot}
+
+loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+uenv_netinstall_cmd
+
+cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
+optargs=VIDEO_CONSOLE
+
+mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+#dvi->defaultdisplay
+mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
+
+loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+uenv_normalboot_cmd
+        ;;
+    beagle)
+
+cat >> ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_netinstall_cmd
+mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+#dvi->defaultdisplay
+mmcargs=setenv bootargs console=\${console} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot}
+
+loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+uenv_netinstall_cmd
+
+cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
+optargs=VIDEO_CONSOLE
+
+mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+#dvi->defaultdisplay
+mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
+
+loaduimage=printenv; run mmc_load_uimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+uenv_normalboot_cmd
+        ;;
+    bone)
+
+cat >> ${TEMPDIR}/bootscripts/netinstall.cmd <<uenv_netinstall_cmd
+rcn_mmcloaduimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+mmc_args=run bootargs_defaults;setenv bootargs \${bootargs} root=\${mmcroot}
+
+mmc_load_uimage=printenv; run rcn_mmcloaduimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage} \${address_uinitrd}
+uenv_netinstall_cmd
+
+cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
+rcn_mmcloaduimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+mmc_args=run bootargs_defaults;setenv bootargs \${bootargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} ip=\${ip_method}
+
+mmc_load_uimage=run rcn_mmcloaduimage; run mmc_load_uinitrd; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage} \${address_uinitrd}
+uenv_normalboot_cmd
+        ;;
+esac
+
+}
+
+function tweak_boot_scripts {
+# echo "Adding Device Specific info to bootscripts"
+# echo "-----------------------------"
+
+ if test "-$ADDON-" = "-pico-"
+ then
+  VIDEO_TIMING="640x480MR-16@60"
+ fi
+
+ if test "-$ADDON-" = "-ulcd-"
+ then
+  VIDEO_TIMING="800x480MR-16@60"
+ fi
+
+ if [ "$SVIDEO_NTSC" ];then
+  VIDEO_TIMING="ntsc"
+  VIDEO_OMAPFB_MODE=tv
+ fi
+
+ if [ "$SVIDEO_PAL" ];then
+  VIDEO_TIMING="pal"
+  VIDEO_OMAPFB_MODE=tv
+ fi
 
  #Set uImage boot address
- sed -i -e 's:UIMAGE_ADDR:'$UIMAGE_ADDR':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:UIMAGE_ADDR:'$UIMAGE_ADDR':g' ${TEMPDIR}/bootscripts/*.cmd
 
  #Set uInitrd boot address
- sed -i -e 's:UINITRD_ADDR:'$UINITRD_ADDR':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:UINITRD_ADDR:'$UINITRD_ADDR':g' ${TEMPDIR}/bootscripts/*.cmd
 
  #Set the Serial Console
- sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/boot.cmd
+ sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/*.cmd
 
 if [ "$SERIAL_MODE" ];then
- sed -i -e 's:VIDEO_CONSOLE ::g' ${TEMPDIR}/boot.cmd
- sed -i -e 's:VIDEO_RAM ::g' ${TEMPDIR}/boot.cmd
- sed -i -e "s/VIDEO_DEVICE:VIDEO_MODE //g" ${TEMPDIR}/boot.cmd
+ #console=CONSOLE
+ #Set the Serial Console
+ sed -i -e 's:DICONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/*.cmd
+
+ #omap3/4 DSS:
+ #VIDEO_RAM
+ sed -i -e 's:VIDEO_RAM ::g' ${TEMPDIR}/bootscripts/*.cmd
+ #omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay}
+ sed -i -e 's:'\${defaultdisplay}'::g' ${TEMPDIR}/bootscripts/*.cmd
+ sed -i -e 's:'\${dvimode}'::g' ${TEMPDIR}/bootscripts/*.cmd
+ #omapfb.mode=: omapdss.def_disp=
+ sed -i -e "s/omapfb.mode=: //g" ${TEMPDIR}/bootscripts/*.cmd
+ sed -i -e 's:omapdss.def_disp= ::g' ${TEMPDIR}/bootscripts/*.cmd
+
 else
- #Enable Video Console
- sed -i -e 's:VIDEO_CONSOLE:'$VIDEO_CONSOLE':g' ${TEMPDIR}/boot.cmd
- sed -i -e 's:VIDEO_RAM:'vram=\${vram}':g' ${TEMPDIR}/boot.cmd
- sed -i -e 's:VIDEO_TIMING:'$VIDEO_TIMING':g' ${TEMPDIR}/boot.cmd
- sed -i -e 's:VIDEO_DEVICE:'$VIDEO_DRV':g' ${TEMPDIR}/boot.cmd
- sed -i -e 's:VIDEO_MODE:'\${dvimode}':g' ${TEMPDIR}/boot.cmd
+ #Set the Video Console
+ sed -i -e 's:DICONSOLE:tty0:g' ${TEMPDIR}/bootscripts/*.cmd
+ sed -i -e 's:VIDEO_CONSOLE:console=tty0:g' ${TEMPDIR}/bootscripts/*.cmd
+
+ #omap3/4 DSS:
+ #VIDEO_RAM
+ sed -i -e 's:VIDEO_RAM:'vram=\${vram}':g' ${TEMPDIR}/bootscripts/*.cmd
+ #set OMAP video: omapfb.mode=VIDEO_OMAPFB_MODE
+ #defaultdisplay=VIDEO_OMAPFB_MODE
+ #dvimode=VIDEO_TIMING
+ sed -i -e 's:VIDEO_OMAPFB_MODE:'$VIDEO_OMAPFB_MODE':g' ${TEMPDIR}/bootscripts/*.cmd
+ sed -i -e 's:VIDEO_TIMING:'$VIDEO_TIMING':g' ${TEMPDIR}/bootscripts/*.cmd
+
 fi
 
- if [ "$USB_ROOTFS" ];then
-  sed -i 's/mmcblk0p5/sda1/g' ${TEMPDIR}/boot.cmd
- fi
+#fixme: broke mx51/53 and reenable VIDEO on final boot..
 
  if [ "$PRINTK" ];then
-  sed -i 's/bootargs/bootargs earlyprintk/g' ${TEMPDIR}/boot.cmd
+  sed -i 's/bootargs/bootargs earlyprintk/g' ${TEMPDIR}/bootscripts/*.cmd
  fi
+}
 
+function setup_bootscripts {
+ mkdir -p ${TEMPDIR}/bootscripts/
+
+ if [ "$USE_UENV" ];then
+  boot_uenv_txt_template
+  tweak_boot_scripts
+ else
+  boot_files_template
+  boot_scr_to_uenv_txt
+  tweak_boot_scripts
+ fi
 }
 
 function prepare_initrd {
@@ -600,6 +776,7 @@ function is_omap {
  SUBARCH="omap"
  VIDEO_CONSOLE="console=tty0"
  VIDEO_DRV="omapfb.mode=dvi"
+ VIDEO_OMAPFB_MODE="dvi"
  VIDEO_TIMING="1280x720MR-16@60"
 }
 
@@ -625,6 +802,7 @@ case "$UBOOT_TYPE" in
  DO_UBOOT=1
  ABI_VER=1
  SERIAL="ttyO2"
+ USE_UENV=1
  is_omap
 
         ;;
@@ -635,8 +813,25 @@ case "$UBOOT_TYPE" in
  DO_UBOOT=1
  ABI_VER=7
  SERIAL="ttyO2"
+ USE_UENV=1
  is_omap
 
+        ;;
+    bone)
+
+ SYSTEM=bone
+ unset IN_VALID_UBOOT
+ DO_UBOOT=1
+ ABI_VER=10
+ SERIAL="ttyO0"
+ USE_UENV=1
+ is_omap
+# mmc driver fails to load with this setting
+# UIMAGE_ADDR="0x80200000"
+# UINITRD_ADDR="0x80A00000"
+ 
+ SERIAL_MODE=1
+ SUBARCH="omap-psp"
         ;;
     igepv2)
 
@@ -667,6 +862,7 @@ case "$UBOOT_TYPE" in
  ABI_VER=5
  SERIAL="ttyO2"
  is_omap
+ VIDEO_TIMING="1024x600MR-16@60"
 
  BETA_KERNEL=1
  SERIAL_MODE=1
@@ -691,7 +887,7 @@ case "$UBOOT_TYPE" in
  SYSTEM=mx53loco
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- DO_UBOOT_DD=1
+ DD_UBOOT=1
  ABI_VER=8
  SERIAL="ttymxc0"
  is_imx53
@@ -710,24 +906,31 @@ function check_distro {
  if test "-$DISTRO_TYPE-" = "-squeeze-"
  then
  DIST=squeeze
+ ARCH=armel
  unset IN_VALID_DISTRO
  fi
 
  if test "-$DISTRO_TYPE-" = "-maverick-"
  then
  DIST=maverick
+ ARCH=armel
+ unset DI_BROKEN_USE_CROSS
  unset IN_VALID_DISTRO
  fi
 
  if test "-$DISTRO_TYPE-" = "-oneiric-"
  then
  DIST=oneiric
+ ARCH=armel
+ unset DI_BROKEN_USE_CROSS
  unset IN_VALID_DISTRO
  fi
 
  if test "-$DISTRO_TYPE-" = "-natty-"
  then
  DIST=natty
+ ARCH=armel
+ unset DI_BROKEN_USE_CROSS
  unset IN_VALID_DISTRO
  fi
 
@@ -738,6 +941,26 @@ function check_distro {
 # fi
 
  if [ "$IN_VALID_DISTRO" ] ; then
+   usage
+ fi
+}
+
+function check_arch {
+ IN_VALID_ARCH=1
+
+ if test "-$ARCH_TYPE-" = "-armel-"
+ then
+ ARCH=armel
+ unset IN_VALID_ARCH
+ fi
+
+ if test "-$ARCH_TYPE-" = "-armhf-"
+ then
+ ARCH=armhf
+ unset IN_VALID_ARCH
+ fi
+
+ if [ "$IN_VALID_ARCH" ] ; then
    usage
  fi
 }
@@ -779,7 +1002,7 @@ esac
 }
 
 function usage {
-    echo "usage: $(basename $0) --mmc /dev/sdX --uboot <dev board>"
+    echo "usage: sudo $(basename $0) --mmc /dev/sdX --uboot <dev board>"
 cat <<EOF
 
 Script Version $SCRIPT_VERSION
@@ -787,26 +1010,19 @@ Bugs email: "bugs at rcn-ee.com"
 
 Required Options:
 --mmc </dev/sdX>
-    Unformated MMC Card
-
-Additional/Optional options:
--h --help
-    this help
-
---probe-mmc
-    List all partitions
 
 --uboot <dev board>
     (omap)
-    beagle_bx - <Ax/Bx Models>
-    beagle - <Cx, xM A/B/C>
-    igepv2 - 
-    panda - <dvi or serial>
-    touchbook - <serial only>
+    beagle_bx - <BeagleBoard Ax/Bx>
+    beagle - <BeagleBoard Cx, xMA/B/C>
+    bone - <BeagleBone Ax>
+    igepv2 - <serial mode only>
+    panda - <PandaBoard Ax>
 
     (freescale)
     mx53loco
 
+Optional:
 --distro <distro>
     Fedora:
       f13 <default>
@@ -816,15 +1032,32 @@ Additional/Optional options:
     ext4 - <set as default>
     btrfs
 
-Optional:
+--arch
+    armel <default>
+    armhf <disabled, should be available in Debian Wheezy/Ubuntu Precise>
+
+--addon <device>
+    pico
+    ulcd <beagle xm>
+
 --firmware
     Add distro firmware
 
 --serial-mode
-    <dvi is default, this overides>
+    <DVI Mode is default, this overrides it for Serial Mode>
 
---usb-rootfs
-    <root=/dev/sda1>
+--svideo-ntsc
+    force ntsc mode for svideo
+
+--svideo-pal
+    force pal mode for svideo
+
+Additional Options:
+-h --help
+    this help
+
+--probe-mmc
+    List all partitions: sudo ./mk_mmc.sh --probe-mmc
 
 Debug:
 --earlyprintk
@@ -841,6 +1074,8 @@ function checkparm {
     fi
 }
 
+IN_VALID_UBOOT=1
+
 # parse commandline options
 while [ ! -z "$1" ]; do
     case $1 in
@@ -850,7 +1085,7 @@ while [ ! -z "$1" ]; do
             ;;
         --probe-mmc)
             MMC="/dev/idontknow"
-            detect_software
+            check_root
             check_mmc
             ;;
         --mmc)
@@ -860,8 +1095,8 @@ while [ ! -z "$1" ]; do
             then
 	        PARTITION_PREFIX="p"
             fi
-            detect_software
-            check_mmc 
+            find_issue
+            check_mmc
             ;;
         --uboot)
             checkparm $2
@@ -872,6 +1107,11 @@ while [ ! -z "$1" ]; do
             checkparm $2
             DISTRO_TYPE="$2"
             check_distro
+            ;;
+        --arch)
+            checkparm $2
+            ARCH_TYPE="$2"
+            check_arch
             ;;
         --firmware)
             FIRMWARE=1
@@ -884,7 +1124,18 @@ while [ ! -z "$1" ]; do
         --serial-mode)
             SERIAL_MODE=1
             ;;
-	--deb-file)
+        --addon)
+            checkparm $2
+            ADDON_TYPE="$2"
+            check_addon_type
+            ;;
+        --svideo-ntsc)
+            SVIDEO_NTSC=1
+            ;;
+        --svideo-pal)
+            SVIDEO_PAL=1
+            ;;
+        --deb-file)
             checkparm $2
             DEB_FILE="$2"
             KERNEL_DEB=1
@@ -895,13 +1146,10 @@ while [ ! -z "$1" ]; do
         --experimental-kernel)
             EXPERIMENTAL_KERNEL=1
             ;;
-        --beta-boot)
-            BETA_BOOT=1
+        --use-beta-bootloader)
+            USE_BETA_BOOTLOADER=1
             ;;
-	--usb-rootfs)
-            USB_ROOTFS=1
-            ;;
-	--earlyprintk)
+        --earlyprintk)
             PRINTK=1
             ;;
     esac
@@ -928,6 +1176,7 @@ if [ "${FIRMWARE}" ] ; then
  dl_firmware
 fi
 
+ setup_bootscripts
 
 exit
  boot_files_template
