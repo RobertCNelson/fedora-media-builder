@@ -167,6 +167,53 @@ function dl_bootloader {
  echo "UBOOT Bootloader: ${UBOOT}"
 }
 
+function dl_kernel_image {
+ echo ""
+ echo "Downloading Device's Kernel Image"
+ echo "-----------------------------"
+
+ KERNEL_SEL="STABLE"
+
+ if [ "$BETA_KERNEL" ];then
+  KERNEL_SEL="TESTING"
+ fi
+
+ if [ "$EXPERIMENTAL_KERNEL" ];then
+  KERNEL_SEL="EXPERIMENTAL"
+ fi
+
+ #FIXME: use squeeze kernel for now
+ DIST=squeeze
+ ARCH=armel
+ DI_BROKEN_USE_CROSS=1
+
+ if [ ! "${KERNEL_DEB}" ] ; then
+  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/LATEST-${SUBARCH}
+  FTP_DIR=$(cat ${TEMPDIR}/dl/LATEST-${SUBARCH} | grep "ABI:1 ${KERNEL_SEL}" | awk '{print $3}')
+  FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')
+  KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
+
+  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/${FTP_DIR}/
+  ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
+  wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}${DIST}-${ARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
+  if [ "${DI_BROKEN_USE_CROSS}" ] ; then
+   CROSS_DEB_FILE=$(echo ${ACTUAL_DEB_FILE} | sed 's:'${DIST}':cross:g')
+   wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}cross/v${KERNEL}/${CROSS_DEB_FILE}
+  fi
+ else
+  unset DI_BROKEN_USE_CROSS
+  KERNEL=${DEB_FILE}
+  #Remove all "\" from file name.
+  ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
+  cp -v ${DEB_FILE} ${DIR}/dl/${DIST}/
+ fi
+
+ #FIXME: reset back to fedora
+ DIST=f13
+
+ echo "Using: ${ACTUAL_DEB_FILE}"
+}
+
 function boot_files_template {
 
 mkdir -p ${TEMPDIR}/
@@ -245,54 +292,6 @@ if ls ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} >/dev/null 2>&1;then
   fi
 else
   wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-fi
-
-}
-
-function dl_kernel_image {
-
-echo ""
-echo "Downloading Kernel Image"
-echo ""
-
- wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/wheezy/LATEST-${SUBARCH}
-# wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}/LATEST-${SUBARCH}
-
- if [ "$BETA_KERNEL" ];then
-  KERNEL_SEL="TESTING"
- else
-  KERNEL_SEL="STABLE"
- fi
-
- if [ "$EXPERIMENTAL_KERNEL" ];then
-  KERNEL_SEL="EXPERIMENTAL"
- fi
-
-if [ ! "${KERNEL_DEB}" ] ; then
-
- FTP_DIR=$(cat ${TEMPDIR}/dl/LATEST-${SUBARCH} | grep "ABI:1 ${KERNEL_SEL}" | awk '{print $3}')
- FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')
- KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
-
-# wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}/${FTP_DIR}/
- wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/wheezy/${FTP_DIR}/
- ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
-
-else
-
- KERNEL=${DEB_FILE}
- #Remove all "\" from file name.
- ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
-
-fi
-
- echo "Using: ${ACTUAL_DEB_FILE}"
-
-if [ ! "${KERNEL_DEB}" ] ; then
- wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}wheezy/v${KERNEL}/${ACTUAL_DEB_FILE}
-# wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}${DIST}/v${KERNEL}/${ACTUAL_DEB_FILE}
-else
- cp -v ${DEB_FILE} ${DIR}/dl/${DIST}/
 fi
 
 }
@@ -925,6 +924,7 @@ fi
  find_issue
  detect_software
  dl_bootloader
+ dl_kernel_image
 
 
  boot_files_template
