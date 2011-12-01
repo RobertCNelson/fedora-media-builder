@@ -46,7 +46,7 @@ IN_VALID_UBOOT=1
 MIRROR="http://rcn-ee.net/deb/"
 
 #Defaults
-RFS=ext4
+RFS=ext3
 DIST=f13
 
 BOOT_LABEL=boot
