@@ -56,8 +56,10 @@ PARTITION_PREFIX=""
 
 FEDORA_MIRROR="http://scotland.proximity.on.ca/fedora-arm/rootfs/"
 
-F13_IMAGE="rootfs-f13-beta3-2011-05-10.tar.bz2"
-F13_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
+#F13_IMAGE="rootfs-f13-beta3-2011-05-10.tar.bz2"
+#F13_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
+F13_IMAGE="rootfs-f13-rc1-2011-06-29.tar.bz2"
+F13_MD5SUM="dd389c64592cb6c3156be5ba9d194cd3"
 
 F14_IMAGE="f14-rootfs-2011-06-23.tar.bz2"
 F14_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
