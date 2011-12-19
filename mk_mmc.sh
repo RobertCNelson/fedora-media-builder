@@ -31,7 +31,7 @@ unset EXPERIMENTAL_KERNEL
 unset USB_ROOTFS
 unset PRINTK
 unset SPL_BOOT
-unset ABI_VER
+unset BOOTLOADER
 unset SMSC95XX_MOREMEM
 unset DD_UBOOT
 unset KERNEL_DEB
@@ -163,19 +163,19 @@ function dl_bootloader {
  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}tools/latest/bootloader
 
  if [ "$USE_BETA_BOOTLOADER" ];then
-  ABI="ABX"
+  ABI="ABX2"
  else
-  ABI="ABI"
+  ABI="ABI2"
  fi
 
  if [ "${SPL_BOOT}" ] ; then
-  MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:MLO" | awk '{print $2}')
+  MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${BOOTLOADER}:SPL" | awk '{print $2}')
   wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MLO}
   MLO=${MLO##*/}
   echo "SPL Bootloader: ${MLO}"
  fi
 
- UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${ABI_VER}:UBOOT" | awk '{print $2}')
+ UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${BOOTLOADER}:BOOT" | awk '{print $2}')
  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${UBOOT}
  UBOOT=${UBOOT##*/}
  echo "UBOOT Bootloader: ${UBOOT}"
@@ -347,7 +347,21 @@ mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} budd
 loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
-    beagle)
+    beagle_cx)
+
+cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
+optargs=VIDEO_CONSOLE
+
+mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
+#dvi->defaultdisplay
+mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_RAM omapfb.mode=\${defaultdisplay}:\${dvimode} omapdss.def_disp=\${defaultdisplay} root=\${mmcroot} rootfstype=\${mmcrootfstype}
+
+loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+uenv_normalboot_cmd
+        ;;
+    beagle_xm)
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
@@ -871,18 +885,29 @@ case "$UBOOT_TYPE" in
  SYSTEM=beagle_bx
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=1
+ BOOTLOADER="BEAGLEBOARD_BX"
  SERIAL="ttyO2"
  USE_UENV=1
  is_omap
 
         ;;
-    beagle)
+    beagle_cx)
 
- SYSTEM=beagle
+ SYSTEM=beagle_cx
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=7
+ BOOTLOADER="BEAGLEBOARD_CX"
+ SERIAL="ttyO2"
+ USE_UENV=1
+ is_omap
+
+        ;;
+    beagle_xm)
+
+ SYSTEM=beagle_xm
+ unset IN_VALID_UBOOT
+ DO_UBOOT=1
+ BOOTLOADER="BEAGLEBOARD_XM"
  SERIAL="ttyO2"
  USE_UENV=1
  is_omap
@@ -893,14 +918,13 @@ case "$UBOOT_TYPE" in
  SYSTEM=bone
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=10
+ BOOTLOADER="BEAGLEBONE_A"
  SERIAL="ttyO0"
  USE_UENV=1
  is_omap
 # mmc driver fails to load with this setting
 # UIMAGE_ADDR="0x80200000"
 # UINITRD_ADDR="0x80A00000"
- 
  SERIAL_MODE=1
  SUBARCH="omap-psp"
         ;;
@@ -909,7 +933,7 @@ case "$UBOOT_TYPE" in
  SYSTEM=igepv2
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=3
+ BOOTLOADER="IGEP00X0"
  SERIAL="ttyO2"
  is_omap
 
@@ -919,7 +943,18 @@ case "$UBOOT_TYPE" in
  SYSTEM=panda
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=2
+ BOOTLOADER="PANDABOARD"
+ SMSC95XX_MOREMEM=1
+ SERIAL="ttyO2"
+ is_omap
+
+        ;;
+    panda_es)
+
+ SYSTEM=panda
+ unset IN_VALID_UBOOT
+ DO_UBOOT=1
+ BOOTLOADER="PANDABOARD_ES"
  SMSC95XX_MOREMEM=1
  SERIAL="ttyO2"
  is_omap
@@ -930,7 +965,7 @@ case "$UBOOT_TYPE" in
  SYSTEM=touchbook
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=5
+ BOOTLOADER="TOUCHBOOK"
  SERIAL="ttyO2"
  is_omap
  VIDEO_TIMING="1024x600MR-16@60"
@@ -944,7 +979,7 @@ case "$UBOOT_TYPE" in
  SYSTEM=crane
  unset IN_VALID_UBOOT
  DO_UBOOT=1
- ABI_VER=6
+ BOOTLOADER="CRANEBOARD"
  SERIAL="ttyO2"
  is_omap
 
@@ -959,7 +994,7 @@ case "$UBOOT_TYPE" in
  unset IN_VALID_UBOOT
  DO_UBOOT=1
  DD_UBOOT=1
- ABI_VER=8
+ BOOTLOADER="MX53LOCO"
  SERIAL="ttymxc0"
  is_imx53
 
@@ -1101,10 +1136,12 @@ Required Options:
 --uboot <dev board>
     (omap)
     beagle_bx - <BeagleBoard Ax/Bx>
-    beagle - <BeagleBoard Cx, xMA/B/C>
+    beagle_cx - <BeagleBoard Cx>
+    beagle_xm - <BeagleBoard xMA/B/C>
     bone - <BeagleBone Ax>
     igepv2 - <serial mode only>
     panda - <PandaBoard Ax>
+    panda_es - <PandaBoard ES>
 
     (freescale)
     mx53loco
