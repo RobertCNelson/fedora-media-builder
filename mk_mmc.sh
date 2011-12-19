@@ -47,8 +47,8 @@ MIRROR="http://rcn-ee.net/deb/"
 
 #Defaults
 RFS=ext4
-DIST="f13"
-ACTUAL_DIST="f13"
+DIST="f14"
+ACTUAL_DIST="f14"
 ARCH="armel"
 USER="root"
 PASS="fedoraarm"
@@ -58,15 +58,10 @@ BOOT_LABEL=boot
 RFS_LABEL=rootfs
 PARTITION_PREFIX=""
 
-FEDORA_MIRROR="http://scotland.proximity.on.ca/fedora-arm/rootfs/"
+FEDORA_MIRROR="http://fedora.roving-it.com/"
 
-#F13_IMAGE="rootfs-f13-beta3-2011-05-10.tar.bz2"
-#F13_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
-F13_IMAGE="rootfs-f13-rc1-2011-06-29.tar.bz2"
-F13_MD5SUM="dd389c64592cb6c3156be5ba9d194cd3"
-
-F14_IMAGE="f14-rootfs-2011-06-23.tar.bz2"
-F14_MD5SUM="d4f68c5fcdfa47079a7baf099daa3ba3"
+F14_IMAGE="rootfs-f14-minimal-RC1.tar.bz2"
+F14_MD5SUM="83f80747f76b23aa4464b0afd2f3c6db"
 
 DIR=$PWD
 TEMPDIR=$(mktemp -d)
@@ -738,8 +733,10 @@ function populate_rootfs {
  #FIXME:
  DIST=${ACTUAL_DIST}
 
- sed -i 's/root/mmcblk2/g' ${TEMPDIR}/disk/etc/fstab
- sed -i 's:nfs:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
+ #F14-rc1
+ #LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
+ sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
+ sed -i 's:ext3:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
 
 if [ "$BTRFS_FSTAB" ] ; then
  sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
@@ -1153,8 +1150,7 @@ Required Options:
 Optional:
 --distro <distro>
     Fedora:
-      f13 <default>
-      f14
+      f14 <default>
 
 --rootfs <fs_type>
     ext3
@@ -1248,7 +1244,7 @@ while [ ! -z "$1" ]; do
         --rootfs)
             checkparm $2
             FS_TYPE="$2"
-            check_fs_type 
+            check_fs_type
             ;;
         --serial-mode)
             SERIAL_MODE=1
