@@ -788,6 +788,8 @@ function populate_rootfs {
    pv ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
    echo "Transfer of Base Rootfs Complete, syncing to disk"
    echo "-----------------------------"
+   sync
+   sync
  fi
 
  #FIXME:
@@ -878,6 +880,8 @@ fi
  echo "-----------------------------"
  echo "Default user: ${USER}"
  echo "Default pass: ${PASS}"
+ echo "-----------------------------"
+ echo "Reminder: Kernel/Modules: depmod will run on first, boot, so make sure to reboot once.
  echo "-----------------------------"
 }
 
