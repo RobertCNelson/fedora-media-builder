@@ -881,7 +881,7 @@ fi
  echo "Default user: ${USER}"
  echo "Default pass: ${PASS}"
  echo "-----------------------------"
- echo "Reminder: Kernel/Modules: depmod will run on first, boot, so make sure to reboot once.
+ echo "Reminder: Kernel/Modules: depmod will run on first, boot, so make sure to reboot once."
  echo "-----------------------------"
 }
 
