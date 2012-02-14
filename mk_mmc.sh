@@ -40,7 +40,7 @@ unset USE_UENV
 unset SVIDEO_NTSC
 unset SVIDEO_PAL
 
-SCRIPT_VERSION="1.11"
+GIT_VERSION=$(git rev-parse --short HEAD)
 IN_VALID_UBOOT=1
 
 MIRROR="http://rcn-ee.net/deb/"
@@ -63,7 +63,7 @@ FEDORA_MIRROR="http://fedora.roving-it.com/"
 F14_IMAGE="rootfs-f14-minimal-RC1.tar.bz2"
 F14_MD5SUM="83f80747f76b23aa4464b0afd2f3c6db"
 
-DIR=$PWD
+DIR="$PWD"
 TEMPDIR=$(mktemp -d)
 
 function check_root {
@@ -147,7 +147,7 @@ function dl_bootloader {
  echo "-----------------------------"
 
  mkdir -p ${TEMPDIR}/dl/${DIST}
- mkdir -p ${DIR}/dl/${DIST}
+ mkdir -p "${DIR}/dl/${DIST}"
 
  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}tools/latest/bootloader
 
@@ -197,17 +197,17 @@ function dl_kernel_image {
 
   wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/${FTP_DIR}/
   ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
-  wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}${DIST}-${ARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
+  wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}${DIST}-${ARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
   if [ "${DI_BROKEN_USE_CROSS}" ] ; then
    CROSS_DEB_FILE=$(echo ${ACTUAL_DEB_FILE} | sed 's:'${DIST}':cross:g')
-   wget -c --directory-prefix=${DIR}/dl/${DIST} ${MIRROR}cross/v${KERNEL}/${CROSS_DEB_FILE}
+   wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}cross/v${KERNEL}/${CROSS_DEB_FILE}
   fi
  else
   unset DI_BROKEN_USE_CROSS
   KERNEL=${DEB_FILE}
   #Remove all "\" from file name.
   ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
-  cp -v ${DEB_FILE} ${DIR}/dl/${DIST}/
+  cp -v ${DEB_FILE} "${DIR}/dl/${DIST}/"
  fi
 
  #FIXME: reset back to fedora
@@ -233,19 +233,19 @@ case "$DIST" in
         ;;
 esac
 
- if [ -f ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} ]; then
-  MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
+ if [ -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" ]; then
+  MD5SUM=$(md5sum "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | awk '{print $1}')
   if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
     echo "Note: md5sum has changed: $MD5SUM"
     echo "-----------------------------"
-    rm -f ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} || true
-    wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-    NEW_MD5SUM=$(md5sum ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | awk '{print $1}')
+    rm -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" || true
+    wget --directory-prefix="${DIR}/dl/${DIST}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+    NEW_MD5SUM=$(md5sum "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | awk '{print $1}')
     echo "Note: new md5sum $NEW_MD5SUM"
     echo "-----------------------------"
   fi
  else
-  wget --directory-prefix=${DIR}/dl/${DIST} ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+  wget --directory-prefix="${DIR}/dl/${DIST}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
  fi
 }
 
@@ -255,23 +255,23 @@ function dl_firmware {
  echo "-----------------------------"
 
  #TODO: We should just use the git tree blobs over distro versions
- if [ ! -f ${DIR}/dl/linux-firmware/.git/config ]; then
-  cd ${DIR}/dl/
+ if [ ! -f "${DIR}/dl/linux-firmware/.git/config" ]; then
+  cd "${DIR}/dl/"
   git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-  cd ${DIR}/
+  cd "${DIR}/"
  else
-  cd ${DIR}/dl/linux-firmware
+  cd "${DIR}/dl/linux-firmware"
   #convert to new repo, if still using dwmw2's..
-  cat ${DIR}/dl/linux-firmware/.git/config | grep dwmw2 && sed -i -e 's:dwmw2:firmware:g' ${DIR}/dl/linux-firmware/.git/config
+  cat "${DIR}/dl/linux-firmware/.git/config" | grep dwmw2 && sed -i -e 's:dwmw2:firmware:g' "${DIR}/dl/linux-firmware/.git/config"
   git pull
-  cd ${DIR}/
+  cd "${DIR}/"
  fi
 
 case "$DIST" in
     f13)
 	#V3.1 needs 1.9.4 for ar9170
-	#wget -c --directory-prefix=${DIR}/dl/${DIST} http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
-	wget -c --directory-prefix=${DIR}/dl/${DIST} http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+	#wget -c --directory-prefix="${DIR}/dl/${DIST}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+	wget -c --directory-prefix="${DIR}/dl/${DIST}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
 	AR9170_FW="carl9170-1.fw"
         ;;
 esac
@@ -561,9 +561,9 @@ function extract_zimage {
  #FIXME
  DIST=wheezy
  if [ ! "${DI_BROKEN_USE_CROSS}" ] ; then
-  dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/kernel
+  dpkg -x "${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/kernel
  else
-  dpkg -x ${DIR}/dl/${DIST}/${CROSS_DEB_FILE} ${TEMPDIR}/kernel
+  dpkg -x "${DIR}/dl/${DIST}/${CROSS_DEB_FILE}" ${TEMPDIR}/kernel
  fi
  #FIXME
  DIST=${ACTUAL_DIST}
@@ -783,7 +783,7 @@ update_boot_files
 
 cd ${TEMPDIR}/disk
 sync
-cd ${DIR}/
+cd "${DIR}/"
 
  echo "Debug: Contents of Boot Partition"
  echo "-----------------------------"
@@ -813,8 +813,8 @@ function populate_rootfs {
 
  if mount -t ${RFS} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
- if ls ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} >/dev/null 2>&1;then
-   pv ${DIR}/dl/${DIST}/${ROOTFS_IMAGE} | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+ if [ -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" ] ; then
+   pv "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
    echo "Transfer of Base Rootfs Complete, syncing to disk"
    echo "-----------------------------"
    sync
@@ -823,7 +823,7 @@ function populate_rootfs {
 
  #FIXME:
  DIST=wheezy
- dpkg -x ${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE} ${TEMPDIR}/disk/
+ dpkg -x "${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
  #FIXME:
  DIST=${ACTUAL_DIST}
 
@@ -892,7 +892,7 @@ add_depmod
  cd ${TEMPDIR}/disk/
  sync
  sync
- cd ${DIR}/
+ cd "${DIR}/"
 
  umount ${TEMPDIR}/disk || true
 
@@ -1228,7 +1228,8 @@ function usage {
     echo "usage: sudo $(basename $0) --mmc /dev/sdX --uboot <dev board>"
 cat <<EOF
 
-Script Version $SCRIPT_VERSION
+Script Version git: ${GIT_VERSION}
+-----------------------------
 Bugs email: "bugs at rcn-ee.com"
 
 Required Options:
@@ -1394,6 +1395,10 @@ if [ "$IN_VALID_UBOOT" ] ; then
     echo "ERROR: --uboot undefined"
     usage
 fi
+
+ echo ""
+ echo "Script Version git: ${GIT_VERSION}"
+ echo "-----------------------------"
 
  find_issue
  detect_software
