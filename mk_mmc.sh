@@ -255,12 +255,14 @@ function dl_firmware {
  echo "-----------------------------"
 
  #TODO: We should just use the git tree blobs over distro versions
- if ! ls ${GIT_DIR}/dl/linux-firmware/.git/ >/dev/null 2>&1;then
+ if [ ! -f ${DIR}/dl/linux-firmware/.git/config ]; then
   cd ${DIR}/dl/
-  git clone git://git.kernel.org/pub/scm/linux/kernel/git/dwmw2/linux-firmware.git
+  git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
   cd ${DIR}/
  else
   cd ${DIR}/dl/linux-firmware
+  #convert to new repo, if still using dwmw2's..
+  cat ${DIR}/dl/linux-firmware/.git/config | grep dwmw2 && sed -i -e 's:dwmw2:firmware:g' ${DIR}/dl/linux-firmware/.git/config
   git pull
   cd ${DIR}/
  fi
