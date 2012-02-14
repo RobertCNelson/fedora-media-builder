@@ -453,15 +453,15 @@ function tweak_boot_scripts {
 
   #setenv defaultdisplay VIDEO_OMAPFB_MODE
   #setenv dvimode VIDEO_TIMING
-  #setenv vram 12MB
-  sed -i -e 's:SCR_VRAM:setenv vram 12MB:g' ${TEMPDIR}/bootscripts/*.cmd
+  #setenv vram VIDEO_OMAP_RAM
+  sed -i -e 's:SCR_VRAM:setenv vram VIDEO_OMAP_RAM:g' ${TEMPDIR}/bootscripts/*.cmd
   sed -i -e 's:SCR_FB:setenv defaultdisplay VIDEO_OMAPFB_MODE:g' ${TEMPDIR}/bootscripts/*.cmd
   sed -i -e 's:SCR_TIMING:setenv dvimode VIDEO_TIMING:g' ${TEMPDIR}/bootscripts/*.cmd
 
   #defaultdisplay=VIDEO_OMAPFB_MODE
   #dvimode=VIDEO_TIMING
-  #vram=12MB
-  sed -i -e 's:UENV_VRAM:vram=12MB:g' ${TEMPDIR}/bootscripts/*.cmd
+  #vram=VIDEO_OMAP_RAM
+  sed -i -e 's:UENV_VRAM:vram=VIDEO_OMAP_RAM:g' ${TEMPDIR}/bootscripts/*.cmd
   sed -i -e 's:UENV_FB:defaultdisplay=VIDEO_OMAPFB_MODE:g' ${TEMPDIR}/bootscripts/*.cmd
   sed -i -e 's:UENV_TIMING:dvimode=VIDEO_TIMING:g' ${TEMPDIR}/bootscripts/*.cmd
 
@@ -492,6 +492,7 @@ function tweak_boot_scripts {
    #Set the Video Console
    sed -i -e 's:VIDEO_CONSOLE:console=tty0:g' ${TEMPDIR}/bootscripts/*.cmd
 
+   sed -i -e 's:VIDEO_OMAP_RAM:'$VIDEO_OMAP_RAM':g' ${TEMPDIR}/bootscripts/${FILE}
    sed -i -e 's:VIDEO_OMAPFB_MODE:'$VIDEO_OMAPFB_MODE':g' ${TEMPDIR}/bootscripts/${FILE}
    sed -i -e 's:VIDEO_TIMING:'$VIDEO_TIMING':g' ${TEMPDIR}/bootscripts/${FILE}
   fi
@@ -958,6 +959,7 @@ function is_omap {
  SUBARCH="omap"
  VIDEO_CONSOLE="console=tty0"
  VIDEO_DRV="omapfb.mode=dvi"
+ VIDEO_OMAP_RAM="12MB"
  VIDEO_OMAPFB_MODE="dvi"
  VIDEO_TIMING="1280x720MR-16@60"
 }
@@ -1046,6 +1048,7 @@ case "$UBOOT_TYPE" in
  SERIAL="ttyO2"
  USE_UENV=1
  is_omap
+ VIDEO_OMAP_RAM="16MB"
 
         ;;
     panda_es)
@@ -1058,6 +1061,7 @@ case "$UBOOT_TYPE" in
  SERIAL="ttyO2"
  USE_UENV=1
  is_omap
+ VIDEO_OMAP_RAM="16MB"
 
         ;;
     touchbook)
