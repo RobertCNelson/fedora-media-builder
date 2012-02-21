@@ -66,6 +66,14 @@ F14_MD5SUM="83f80747f76b23aa4464b0afd2f3c6db"
 DIR="$PWD"
 TEMPDIR=$(mktemp -d)
 
+function is_element_of {
+	testelt=$1
+	for validelt in $2 ; do
+		[ $testelt = $validelt ] && return 0
+	done
+	return 1
+}
+
 function check_root {
 if [[ $UID -ne 0 ]]; then
  echo "$0 must be run as sudo user or root"
