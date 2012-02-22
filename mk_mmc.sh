@@ -1446,7 +1446,7 @@ if [ "$IN_VALID_UBOOT" ] ; then
 	usage
 fi
 
-if [ -n ${ADDON} ] ; then
+if [ -n "${ADDON}" ] ; then
 	if ! is_valid_addon ${ADDON} ; then
 		echo "ERROR: ${ADDON} is not a valid addon type"
 		echo "-----------------------------"
