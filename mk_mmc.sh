@@ -36,6 +36,7 @@ unset SMSC95XX_MOREMEM
 unset DD_UBOOT
 unset KERNEL_DEB
 unset USE_UENV
+unset ADDON
 
 unset SVIDEO_NTSC
 unset SVIDEO_PAL
@@ -72,6 +73,22 @@ function is_element_of {
 		[ $testelt = $validelt ] && return 0
 	done
 	return 1
+}
+
+#########################################################################
+#
+#  Define valid "--addon" values.
+#
+#########################################################################
+
+VALID_ADDONS="pico ulcd"
+
+function is_valid_addon {
+	if is_element_of $1 "${VALID_ADDONS}" ] ; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 function check_root {
@@ -1286,10 +1303,6 @@ Required Options:
     (freescale)
     mx53loco
 
---addon <device>
-    pico
-    ulcd <beagle xm>
-
 Optional:
 --distro <distro>
     Fedora:
@@ -1304,7 +1317,7 @@ Optional:
     armel <default>
     armhf <disabled, should be available in Debian Wheezy/Ubuntu Precise>
 
---addon <device>
+--addon <additional peripheral device>
     pico
     ulcd <beagle xm>
 
@@ -1394,8 +1407,7 @@ while [ ! -z "$1" ]; do
             ;;
         --addon)
             checkparm $2
-            ADDON_TYPE="$2"
-            check_addon_type
+            ADDON=$2
             ;;
         --svideo-ntsc)
             SVIDEO_NTSC=1
@@ -1424,14 +1436,21 @@ while [ ! -z "$1" ]; do
     shift
 done
 
-if [ ! "${MMC}" ];then
-    echo "ERROR: --mmc undefined"
-    usage
+if [ ! "${MMC}" ] ; then
+	echo "ERROR: --mmc undefined"
+	usage
 fi
 
 if [ "$IN_VALID_UBOOT" ] ; then
-    echo "ERROR: --uboot undefined"
-    usage
+	echo "ERROR: --uboot undefined"
+	usage
+fi
+
+if [ -n ${ADDON} ] ; then
+	if ! is_valid_addon ${ADDON} ; then
+		echo "ERROR: ${ADDON} is not a valid addon type"
+		usage
+	fi
 fi
 
  echo ""
