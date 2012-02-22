@@ -47,7 +47,7 @@ IN_VALID_UBOOT=1
 MIRROR="http://rcn-ee.net/deb/"
 
 #Defaults
-RFS=ext4
+ROOTFS_TYPE=ext4
 DIST="f14"
 ACTUAL_DIST="f14"
 ARCH="armel"
@@ -56,7 +56,7 @@ PASS="fedoraarm"
 
 
 BOOT_LABEL=boot
-RFS_LABEL=rootfs
+ROOTFS_LABEL=rootfs
 PARTITION_PREFIX=""
 
 FEDORA_MIRROR="http://fedora.roving-it.com/"
@@ -73,6 +73,22 @@ function is_element_of {
 		[ $testelt = $validelt ] && return 0
 	done
 	return 1
+}
+
+#########################################################################
+#
+#  Define valid "--rootfs" root filesystem types.
+#
+#########################################################################
+
+VALID_ROOTFS_TYPES="ext2 ext3 ext4 btrfs"
+
+function is_valid_rootfs_type {
+	if is_element_of $1 "${VALID_ROOTFS_TYPES}" ] ; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 #########################################################################
@@ -463,7 +479,7 @@ function tweak_boot_scripts {
  sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/*.cmd
 
  #Set filesystem type
- sed -i -e 's:FINAL_FSTYPE:'$RFS':g' ${TEMPDIR}/bootscripts/*.cmd
+ sed -i -e 's:FINAL_FSTYPE:'$ROOTFS_TYPE':g' ${TEMPDIR}/bootscripts/*.cmd
 
  if [ "${IS_OMAP}" ] ; then
   sed -i -e 's/ETH_ADDR //g' ${TEMPDIR}/bootscripts/*.cmd
@@ -658,7 +674,7 @@ function dd_uboot_before_boot_partition {
 }
 
 function calculate_rootfs_partition {
- echo "Creating rootfs ${RFS} Partition"
+ echo "Creating rootfs ${ROOTFS_TYPE} Partition"
  echo "-----------------------------"
 
  unset END_BOOT
@@ -667,13 +683,13 @@ function calculate_rootfs_partition {
  unset END_DEVICE
  END_DEVICE=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep Free | tail -n 1 | awk '{print $2}' | cut -d "M" -f1)
 
- parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${RFS} ${END_BOOT} ${END_DEVICE}
+ parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}
  sync
 
  if [ "$FDISK_DEBUG" ];then
-  echo "Debug: ${RFS} Partition"
+  echo "Debug: ${ROOTFS_TYPE} Partition"
   echo "-----------------------------"
-  echo "parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${RFS} ${END_BOOT} ${END_DEVICE}"
+  echo "parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}"
   fdisk -l ${MMC}
  fi
 }
@@ -685,9 +701,9 @@ function format_boot_partition {
 }
 
 function format_rootfs_partition {
- echo "Formating rootfs Partition as ${RFS}"
+ echo "Formating rootfs Partition as ${ROOTFS_TYPE}"
  echo "-----------------------------"
- mkfs.${RFS} ${MMC}${PARTITION_PREFIX}2 -L ${RFS_LABEL}
+ mkfs.${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 -L ${ROOTFS_LABEL}
 }
 
 function create_partitions {
@@ -832,7 +848,7 @@ function populate_rootfs {
 
  partprobe ${MMC}
 
- if mount -t ${RFS} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
+ if mount -t ${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
  if [ -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" ] ; then
    pv "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
@@ -851,9 +867,9 @@ function populate_rootfs {
  #F14-rc1
  #LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
  sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
- sed -i 's:ext3:'$RFS':g' ${TEMPDIR}/disk/etc/fstab
+ sed -i 's:ext3:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
 
-if [ "$BTRFS_FSTAB" ] ; then
+if [ "$BTROOTFS_TYPE_FSTAB" ] ; then
  sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
 fi
 
@@ -1226,42 +1242,6 @@ function check_arch {
  fi
 }
 
-function check_fs_type {
- IN_VALID_FS=1
-
-case "$FS_TYPE" in
-    ext2)
-
- RFS=ext2
- unset IN_VALID_FS
-
-        ;;
-    ext3)
-
- RFS=ext3
- unset IN_VALID_FS
-
-        ;;
-    ext4)
-
- RFS=ext4
- unset IN_VALID_FS
-
-        ;;
-    btrfs)
-
- RFS=btrfs
- unset IN_VALID_FS
- BTRFS_FSTAB=1
-
-        ;;
-esac
-
- if [ "$IN_VALID_FS" ] ; then
-   usage
- fi
-}
-
 function usage {
     echo "usage: sudo $(basename $0) --mmc /dev/sdX --uboot <dev board>"
 cat <<EOF
@@ -1291,11 +1271,6 @@ Optional:
     Fedora:
       f14 <default>
 
---rootfs <fs_type>
-    ext3
-    ext4 - <set as default>
-    btrfs
-
 --arch
     armel <default>
     armhf <disabled, should be available in Debian Wheezy/Ubuntu Precise>
@@ -1303,6 +1278,12 @@ Optional:
 --addon <additional peripheral device>
     pico
     ulcd <beagle xm>
+
+--rootfs <fs_type>
+    ext2
+    ext3
+    ext4 - <set as default>
+    btrfs
 
 --firmware
     Add distro firmware
@@ -1380,17 +1361,16 @@ while [ ! -z "$1" ]; do
         --firmware)
             FIRMWARE=1
             ;;
-        --rootfs)
-            checkparm $2
-            FS_TYPE="$2"
-            check_fs_type
-            ;;
         --serial-mode)
             SERIAL_MODE=1
             ;;
         --addon)
             checkparm $2
             ADDON=$2
+            ;;
+        --rootfs)
+            checkparm $2
+            ROOTFS_TYPE="$2"
             ;;
         --svideo-ntsc)
             SVIDEO_NTSC=1
@@ -1427,6 +1407,16 @@ fi
 if [ "$IN_VALID_UBOOT" ] ; then
 	echo "ERROR: --uboot undefined"
 	usage
+fi
+
+if ! is_valid_rootfs_type ${ROOTFS_TYPE} ; then
+	echo "ERROR: ${ROOTFS_TYPE} is not a valid root filesystem type"
+	echo "Valid types: ${VALID_ROOTFS_TYPES}"
+	exit
+fi
+
+if [ "${ROOTFS_TYPE}" = "btrfs" ] ; then
+	BTRFS_FSTAB=1
 fi
 
 if [ -n "${ADDON}" ] ; then
