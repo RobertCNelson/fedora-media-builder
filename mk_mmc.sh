@@ -384,6 +384,17 @@ mmcroot=/dev/mmcblk0p2 ro
 mmcrootfstype=FINAL_FSTYPE rootwait fixrtc
 uenv_generic_normalboot_cmd
 
+if test "-$ADDON-" = "-ulcd-"
+then
+
+cat >> ${TEMPDIR}/bootscripts/normal.cmd <<ulcd_uenv_normalboot_cmd
+
+lcd1=i2c mw 40 00 00; i2c mw 40 04 80; i2c mw 40 0d 05
+uenvcmd=i2c dev 1; run lcd1; i2c dev 0
+
+ulcd_uenv_normalboot_cmd
+fi
+
 case "$SYSTEM" in
     beagle_bx)
 
