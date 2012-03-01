@@ -326,15 +326,14 @@ function dl_firmware {
   cd "${DIR}/"
  fi
 
-case "$DIST" in
-    f13)
-	#V3.1 needs 1.9.4 for ar9170
-	#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
-	wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
-	AR9170_FW="carl9170-1.fw"
-        ;;
-esac
-
+	case "${DISTARCH}" in
+	f13-armel)
+		#V3.1 needs 1.9.4 for ar9170
+		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+		AR9170_FW="carl9170-1.fw"
+		;;
+	esac
 }
 
 function boot_files_template {
