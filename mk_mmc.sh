@@ -1244,21 +1244,21 @@ function check_distro {
 	unset IN_VALID_DISTRO
 
 	case "${DISTRO_TYPE}" in
-	f14-armel)
+	f14-armel|f14-sfp|f14)
 		DIST=f14
 		ARCH=armel
 		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
 		;;
-	f17-armel)
+	f17-armel|f17-sfp)
 		DIST=f17
 		ARCH=armel
 		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
 		;;
-	f17-armhf)
+	f17-armhf|f17-hfp)
 		DIST=f17
 		ARCH=armhf
 		ACTUAL_DIST="${DIST}"
