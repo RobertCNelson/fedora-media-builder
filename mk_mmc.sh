@@ -44,7 +44,7 @@ unset SVIDEO_PAL
 GIT_VERSION=$(git rev-parse --short HEAD)
 IN_VALID_UBOOT=1
 
-MIRROR="http://rcn-ee.net/deb/"
+MIRROR="http://rcn-ee.net/deb"
 
 #Defaults
 ROOTFS_TYPE=ext4
@@ -173,7 +173,7 @@ function dl_bootloader {
  mkdir -p ${TEMPDIR}/dl/${DIST}
  mkdir -p "${DIR}/dl/${DIST}"
 
- wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}tools/latest/bootloader
+ wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/tools/latest/bootloader
 
  if [ "$USE_BETA_BOOTLOADER" ];then
   ABI="ABX2"
@@ -221,10 +221,10 @@ function dl_kernel_image {
 
   wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/${FTP_DIR}/
   ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
-  wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}${DIST}-${ARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
+  wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}/${DIST}-${ARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
   if [ "${DI_BROKEN_USE_CROSS}" ] ; then
    CROSS_DEB_FILE=$(echo ${ACTUAL_DEB_FILE} | sed 's:'${DIST}':cross:g')
-   wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}cross/v${KERNEL}/${CROSS_DEB_FILE}
+   wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}/cross/v${KERNEL}/${CROSS_DEB_FILE}
   fi
  else
   unset DI_BROKEN_USE_CROSS
