@@ -309,25 +309,36 @@ esac
 }
 
 function dl_firmware {
- echo ""
- echo "Downloading Firmware"
- echo "-----------------------------"
+	echo ""
+	echo "Downloading Firmware"
+	echo "-----------------------------"
 
- #TODO: We should just use the git tree blobs over distro versions
- if [ ! -f "${DIR}/dl/linux-firmware/.git/config" ]; then
-  cd "${DIR}/dl/"
-  git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-  cd "${DIR}/"
- else
-  cd "${DIR}/dl/linux-firmware"
-  #convert to new repo, if still using dwmw2's..
-  cat "${DIR}/dl/linux-firmware/.git/config" | grep dwmw2 && sed -i -e 's:dwmw2:firmware:g' "${DIR}/dl/linux-firmware/.git/config"
-  git pull
-  cd "${DIR}/"
- fi
+	#TODO: We should just use the git tree blobs over distro versions
+	if [ ! -f "${DIR}/dl/linux-firmware/.git/config" ]; then
+		cd "${DIR}/dl/"
+		git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+		cd "${DIR}/"
+	else
+		cd "${DIR}/dl/linux-firmware"
+		cat "${DIR}/dl/linux-firmware/.git/config" | grep dwmw2 && sed -i -e 's:dwmw2:firmware:g' "${DIR}/dl/linux-firmware/.git/config"
+		git pull
+		cd "${DIR}/"
+	fi
 
 	case "${DISTARCH}" in
-	f13-armel)
+	f14-armel)
+		#V3.1 needs 1.9.4 for ar9170
+		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+		AR9170_FW="carl9170-1.fw"
+		;;
+	f17-armel)
+		#V3.1 needs 1.9.4 for ar9170
+		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+		AR9170_FW="carl9170-1.fw"
+		;;
+	f17-armhf)
 		#V3.1 needs 1.9.4 for ar9170
 		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
 		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
