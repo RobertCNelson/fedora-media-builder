@@ -59,7 +59,6 @@ DISTARCH="${DIST}-${ARCH}"
 USER="root"
 PASS="fedoraarm"
 
-
 BOOT_LABEL=boot
 ROOTFS_LABEL=rootfs
 PARTITION_PREFIX=""
@@ -68,6 +67,12 @@ FEDORA_MIRROR="http://fedora.roving-it.com/"
 
 F14_IMAGE="rootfs-f14-minimal-RC1.tar.bz2"
 F14_MD5SUM="83f80747f76b23aa4464b0afd2f3c6db"
+
+F17_SF_IMAGE="rootfs-f17-sfp-alpha1.tar.bz2"
+F17_SF_MD5SUM="x"
+
+F17_HF_IMAGE="rootfs-f17-hfp-alpha1.tar.bz2"
+F17_HF_MD5SUM="a69b90c53c3dd60142c96f7d39df7659"
 
 DIR="$PWD"
 TEMPDIR=$(mktemp -d)
@@ -276,36 +281,39 @@ function dl_kernel_image {
 }
 
 function dl_root_image {
+	echo ""
+	echo "Downloading Fedora Root Image"
+	echo "-----------------------------"
 
- echo ""
- echo "Downloading Fedora Root Image"
- echo "-----------------------------"
+	case "${DISTARCH}" in
+	f14-armel)
+		ROOTFS_MD5SUM=$F14_MD5SUM
+		ROOTFS_IMAGE=$F14_IMAGE
+		;;
+	f17-armel)
+		ROOTFS_MD5SUM=$F17_SF_MD5SUM
+		ROOTFS_IMAGE=$F17_SF_IMAGE
+		;;
+	f17-armhf)
+		ROOTFS_MD5SUM=$F17_HF_MD5SUM
+		ROOTFS_IMAGE=$F17_HF_IMAGE
+		;;
+	esac
 
-case "$DIST" in
-    f13)
-	ROOTFS_MD5SUM=$F13_MD5SUM
-	ROOTFS_IMAGE=$F13_IMAGE
-        ;;
-    f14)
-	ROOTFS_MD5SUM=$F14_MD5SUM
-	ROOTFS_IMAGE=$F14_IMAGE
-        ;;
-esac
-
- if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ]; then
-  MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
-  if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
-    echo "Note: md5sum has changed: $MD5SUM"
-    echo "-----------------------------"
-    rm -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" || true
-    wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-    NEW_MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
-    echo "Note: new md5sum $NEW_MD5SUM"
-    echo "-----------------------------"
-  fi
- else
-  wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
- fi
+	if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ]; then
+		MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
+		if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
+			echo "Note: md5sum has changed: $MD5SUM"
+			echo "-----------------------------"
+			rm -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" || true
+			wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+			NEW_MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
+			echo "Note: new md5sum $NEW_MD5SUM"
+			echo "-----------------------------"
+		fi
+	else
+		wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+	fi
 }
 
 function dl_firmware {
@@ -920,22 +928,36 @@ function populate_rootfs {
  #FIXME:
  DISTARCH="${ACTUAL_DIST}-${ARCH}"
 
- #F14-rc1
- #LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
- sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
- sed -i 's:ext3:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
+	case "${DISTRO_TYPE}" in
+	f14-armel)
+		#LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
+		sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
+		sed -i 's:ext3:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
+		;;
+	f17-armel|f17-armhf)
+		#LABEL="rootfs"          /                       ext4    defaults        1 1
+		sed -i 's:LABEL="rootfs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
+		sed -i 's:ext4:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
+		;;
+	esac
 
 if [ "$BTROOTFS_TYPE_FSTAB" ] ; then
  sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
 fi
 
-cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<serial_console
-start on stopped rc RUNLEVEL=[2345]
-stop on starting runlevel [016]
 
-respawn
-exec /sbin/agetty /dev/ttyO2 115200
-serial_console
+	case "${DISTRO_TYPE}" in
+	f14-armel)
+		cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<-__EOF__
+			start on stopped rc RUNLEVEL=[2345]
+			stop on starting runlevel [016]
+			
+			respawn
+			exec /sbin/agetty /dev/ttyO2 115200
+		__EOF__
+
+		;;
+	esac
 
 #So most of the default images use ttyO2, but the bone uses ttyO0, need to find a better way..
 if test "-$SERIAL-" != "-ttyO2-"
@@ -951,12 +973,13 @@ fi
  echo "Fedora: Adding root login over serial: ${SERIAL} to /etc/securetty"
  cat ${TEMPDIR}/disk/etc/securetty | grep ${SERIAL} || echo ${SERIAL} >> ${TEMPDIR}/disk/etc/securetty
 
-cat >> ${TEMPDIR}/disk/etc/rc.d/rc.sysinit <<add_depmod
+	cat >> ${TEMPDIR}/disk/etc/rc.d/rc.sysinit <<-__EOF__
+		#!/bin/sh
 
-if [ ! -f /lib/modules/`uname -r`/modules.dep ]; then
- /sbin/depmod -a
-fi
-add_depmod
+		if [ ! -f /lib/modules/\$(uname -r)/modules.dep ] ; then
+			/sbin/depmod -a
+		fi
+	__EOF__
 
  if [ "$CREATE_SWAP" ] ; then
 
@@ -1221,10 +1244,24 @@ function check_distro {
 	unset IN_VALID_DISTRO
 
 	case "${DISTRO_TYPE}" in
-	f14)
+	f14-armel)
 		DIST=f14
 		ARCH=armel
-		ACTUAL_DIST="${ARCH}"
+		ACTUAL_DIST="${DIST}"
+		USER="root"
+		PASS="fedoraarm"
+		;;
+	f17-armel)
+		DIST=f17
+		ARCH=armel
+		ACTUAL_DIST="${DIST}"
+		USER="root"
+		PASS="fedoraarm"
+		;;
+	f17-armhf)
+		DIST=f17
+		ARCH=armhf
+		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
 		;;
@@ -1435,3 +1472,4 @@ fi
  create_partitions
  populate_boot
  populate_rootfs
+
