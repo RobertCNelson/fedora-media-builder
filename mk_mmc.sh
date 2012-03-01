@@ -69,7 +69,7 @@ F14_IMAGE="rootfs-f14-minimal-RC1.tar.bz2"
 F14_MD5SUM="83f80747f76b23aa4464b0afd2f3c6db"
 
 F17_SF_IMAGE="rootfs-f17-sfp-alpha1.tar.bz2"
-F17_SF_MD5SUM="x"
+F17_SF_MD5SUM="f1b61adf54f2f247312da4cefbdc7e3c"
 
 F17_HF_IMAGE="rootfs-f17-hfp-alpha1.tar.bz2"
 F17_HF_MD5SUM="a69b90c53c3dd60142c96f7d39df7659"
