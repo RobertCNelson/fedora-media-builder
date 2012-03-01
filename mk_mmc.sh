@@ -48,9 +48,12 @@ MIRROR="http://rcn-ee.net/deb"
 
 #Defaults
 ROOTFS_TYPE=ext4
+
 DIST="f14"
 ACTUAL_DIST="f14"
 ARCH="armel"
+DISTARCH="${DIST}-${ARCH}"
+
 USER="root"
 PASS="fedoraarm"
 
@@ -170,8 +173,8 @@ function dl_bootloader {
  echo "Downloading Device's Bootloader"
  echo "-----------------------------"
 
- mkdir -p ${TEMPDIR}/dl/${DIST}
- mkdir -p "${DIR}/dl/${DIST}"
+ mkdir -p ${TEMPDIR}/dl/${DISTARCH}
+ mkdir -p "${DIR}/dl/${DISTARCH}"
 
  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/tools/latest/bootloader
 
@@ -209,17 +212,16 @@ function dl_kernel_image {
   KERNEL_SEL="EXPERIMENTAL"
  fi
 
- #FIXME: use squeeze kernel for now
- DIST=wheezy
- ARCH=armel
+	#FIXME: use Wheezy kernel for now
+	DISTARCH="wheezy-${ARCH}"
 
  if [ ! "${KERNEL_DEB}" ] ; then
-  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/LATEST-${SUBARCH}
+  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DISTARCH}/LATEST-${SUBARCH}
   FTP_DIR=$(cat ${TEMPDIR}/dl/LATEST-${SUBARCH} | grep "ABI:1 ${KERNEL_SEL}" | awk '{print $3}')
   FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')
   KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
 
-  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DIST}-${ARCH}/${FTP_DIR}/
+  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ http://rcn-ee.net/deb/${DISTARCH}/${FTP_DIR}/
   ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image | awk -F "\"" '{print $2}')
   wget -c --directory-prefix="${DIR}/dl/${DIST}" ${MIRROR}/${DIST}-${ARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
   if [ "${DI_BROKEN_USE_CROSS}" ] ; then
@@ -235,7 +237,7 @@ function dl_kernel_image {
  fi
 
  #FIXME: reset back to fedora
- DIST=${ACTUAL_DIST}
+ DISTARCH="${ACTUAL_DIST}-${ARCH}"
 
  echo "Using: ${ACTUAL_DEB_FILE}"
 }
@@ -257,19 +259,19 @@ case "$DIST" in
         ;;
 esac
 
- if [ -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" ]; then
-  MD5SUM=$(md5sum "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | awk '{print $1}')
+ if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ]; then
+  MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
   if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
     echo "Note: md5sum has changed: $MD5SUM"
     echo "-----------------------------"
-    rm -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" || true
-    wget --directory-prefix="${DIR}/dl/${DIST}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-    NEW_MD5SUM=$(md5sum "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | awk '{print $1}')
+    rm -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" || true
+    wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+    NEW_MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
     echo "Note: new md5sum $NEW_MD5SUM"
     echo "-----------------------------"
   fi
  else
-  wget --directory-prefix="${DIR}/dl/${DIST}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+  wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
  fi
 }
 
@@ -294,8 +296,8 @@ function dl_firmware {
 case "$DIST" in
     f13)
 	#V3.1 needs 1.9.4 for ar9170
-	#wget -c --directory-prefix="${DIR}/dl/${DIST}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
-	wget -c --directory-prefix="${DIR}/dl/${DIST}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+	#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+	wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
 	AR9170_FW="carl9170-1.fw"
         ;;
 esac
@@ -596,14 +598,14 @@ function extract_zimage {
  mkdir -p ${TEMPDIR}/kernel
  echo "Extracting Kernel Boot Image"
  #FIXME
- DIST=wheezy
+ DISTARCH="wheezy-${ARCH}"
  if [ ! "${DI_BROKEN_USE_CROSS}" ] ; then
-  dpkg -x "${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/kernel
+  dpkg -x "${DIR}/dl/${DISTARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/kernel
  else
-  dpkg -x "${DIR}/dl/${DIST}/${CROSS_DEB_FILE}" ${TEMPDIR}/kernel
+  dpkg -x "${DIR}/dl/${DISTARCH}/${CROSS_DEB_FILE}" ${TEMPDIR}/kernel
  fi
  #FIXME
- DIST=${ACTUAL_DIST}
+ DISTARCH="${ACTUAL_DIST}-${ARCH}"
 }
 
 function unmount_all_drive_partitions {
@@ -850,8 +852,8 @@ function populate_rootfs {
 
  if mount -t ${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
- if [ -f "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" ] ; then
-   pv "${DIR}/dl/${DIST}/${ROOTFS_IMAGE}" | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+ if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ] ; then
+   pv "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
    echo "Transfer of Base Rootfs Complete, syncing to disk"
    echo "-----------------------------"
    sync
@@ -859,10 +861,10 @@ function populate_rootfs {
  fi
 
  #FIXME:
- DIST=wheezy
- dpkg -x "${DIR}/dl/${DIST}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
+ DISTARCH="wheezy-${ARCH}"
+ dpkg -x "${DIR}/dl/${DISTARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
  #FIXME:
- DIST=${ACTUAL_DIST}
+ DISTARCH="${ACTUAL_DIST}-${ARCH}"
 
  #F14-rc1
  #LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
@@ -1162,84 +1164,23 @@ case "$UBOOT_TYPE" in
 }
 
 function check_distro {
- IN_VALID_DISTRO=1
+	unset IN_VALID_DISTRO
 
- if test "-$DISTRO_TYPE-" = "-squeeze-"
- then
- DIST=squeeze
- ARCH=armel
- unset IN_VALID_DISTRO
- fi
+	case "${DISTRO_TYPE}" in
+	f14)
+		DIST=f14
+		ARCH=armel
+		ACTUAL_DIST="${ARCH}"
+		USER="root"
+		PASS="fedoraarm"
+		;;
+	*)
+		IN_VALID_DISTRO=1
+		usage
+		;;
+	esac
 
- if test "-$DISTRO_TYPE-" = "-maverick-"
- then
- DIST=maverick
- ARCH=armel
- unset DI_BROKEN_USE_CROSS
- unset IN_VALID_DISTRO
- fi
-
- if test "-$DISTRO_TYPE-" = "-oneiric-"
- then
- DIST=oneiric
- ARCH=armel
- unset DI_BROKEN_USE_CROSS
- unset IN_VALID_DISTRO
- fi
-
- if test "-$DISTRO_TYPE-" = "-natty-"
- then
- DIST=natty
- ARCH=armel
- unset DI_BROKEN_USE_CROSS
- unset IN_VALID_DISTRO
- fi
-
- if test "-$DISTRO_TYPE-" = "-f13-"
- then
- DIST="f13"
- ACTUAL_DIST="f13"
- ARCH="armel"
- USER="root"
- PASS="fedoraarm"
- unset DI_BROKEN_USE_CROSS
- unset IN_VALID_DISTRO
- fi
-
- if test "-$DISTRO_TYPE-" = "-f14-"
- then
- DIST=f14
- ACTUAL_DIST=f14
- ARCH=armel
- USER="root"
- PASS="fedoraarm"
- unset DI_BROKEN_USE_CROSS
- unset IN_VALID_DISTRO
- fi
-
- if [ "$IN_VALID_DISTRO" ] ; then
-   usage
- fi
-}
-
-function check_arch {
- IN_VALID_ARCH=1
-
- if test "-$ARCH_TYPE-" = "-armel-"
- then
- ARCH=armel
- unset IN_VALID_ARCH
- fi
-
- if test "-$ARCH_TYPE-" = "-armhf-"
- then
- ARCH=armhf
- unset IN_VALID_ARCH
- fi
-
- if [ "$IN_VALID_ARCH" ] ; then
-   usage
- fi
+	DISTARCH="${DIST}-${ARCH}"
 }
 
 function usage {
@@ -1270,10 +1211,6 @@ Optional:
 --distro <distro>
     Fedora:
       f14 <default>
-
---arch
-    armel <default>
-    armhf <disabled, should be available in Debian Wheezy/Ubuntu Precise>
 
 --addon <additional peripheral device>
     pico
@@ -1352,11 +1289,6 @@ while [ ! -z "$1" ]; do
             checkparm $2
             DISTRO_TYPE="$2"
             check_distro
-            ;;
-        --arch)
-            checkparm $2
-            ARCH_TYPE="$2"
-            check_arch
             ;;
         --firmware)
             FIRMWARE=1
