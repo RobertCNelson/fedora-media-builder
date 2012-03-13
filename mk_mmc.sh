@@ -408,6 +408,9 @@ function boot_uenv_txt_template {
 		mmcroot=/dev/mmcblk0p2 ro
 		mmcrootfstype=FINAL_FSTYPE rootwait fixrtc
 
+		xyz_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
+		xyz_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
+
 	__EOF__
 
 	if [ "x${ADDON}" == "xulcd" ] ; then
@@ -424,12 +427,9 @@ case "$SYSTEM" in
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype} musb_hdrc.fifo_mode=5
 
-loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+loaduimage=run xyz_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     beagle_cx)
@@ -437,12 +437,9 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype} musb_hdrc.fifo_mode=5
 
-loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+loaduimage=run xyz_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     beagle_xm)
@@ -450,12 +447,9 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+loaduimage=run xyz_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     crane)
@@ -463,12 +457,9 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+loaduimage=run xyz_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     panda)
@@ -476,12 +467,9 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+loaduimage=run xyz_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     panda_es)
@@ -489,23 +477,17 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmc_load_uimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
 
-loaduimage=run mmc_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
+loaduimage=run xyz_load_uimage; echo Booting from mmc ...; run mmcargs; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
     bone)
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
-rcn_mmcloaduimage=fatload mmc 0:1 \${address_uimage} \${bootfile}
-mmc_load_uinitrd=fatload mmc 0:1 \${address_uinitrd} \${bootinitrd}
-
 mmc_args=run bootargs_defaults;setenv bootargs \${bootargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} ip=\${ip_method}
 
-mmc_load_uimage=run rcn_mmcloaduimage; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage}
+mmc_load_uimage=run xyz_load_uimage; echo Booting from mmc ...; run mmc_args; bootm \${address_uimage}
 uenv_normalboot_cmd
         ;;
 esac
