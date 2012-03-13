@@ -413,6 +413,8 @@ function boot_uenv_txt_template {
 
 		xyz_mmcboot=run xyz_load_uimage; echo Booting from mmc ...
 
+		mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype} \${device_args}
+
 	__EOF__
 
 	if [ "x${ADDON}" == "xulcd" ] ; then
@@ -429,7 +431,7 @@ case "$SYSTEM" in
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype} musb_hdrc.fifo_mode=5
+device_args=mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} musb_hdrc.fifo_mode=5
 
 loaduimage=run xyz_mmcboot; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
@@ -439,7 +441,7 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype} musb_hdrc.fifo_mode=5
+device_args=mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} musb_hdrc.fifo_mode=5
 
 loaduimage=run xyz_mmcboot; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
@@ -449,7 +451,7 @@ uenv_normalboot_cmd
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
 
-mmcargs=setenv bootargs console=\${console} \${optargs} mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} camera=\${camera} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
+device_args=mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2}
 
 loaduimage=run xyz_mmcboot; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
@@ -458,8 +460,7 @@ uenv_normalboot_cmd
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
-
-mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
+device_args=
 
 loaduimage=run xyz_mmcboot; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
@@ -468,8 +469,7 @@ uenv_normalboot_cmd
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
-
-mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
+device_args=
 
 loaduimage=run xyz_mmcboot; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
@@ -478,8 +478,7 @@ uenv_normalboot_cmd
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
 optargs=VIDEO_CONSOLE
-
-mmcargs=setenv bootargs console=\${console} \${optargs} VIDEO_DISPLAY root=\${mmcroot} rootfstype=\${mmcrootfstype}
+device_args=
 
 loaduimage=run xyz_mmcboot; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
@@ -487,9 +486,9 @@ uenv_normalboot_cmd
     bone)
 
 cat >> ${TEMPDIR}/bootscripts/normal.cmd <<uenv_normalboot_cmd
-mmc_args=run bootargs_defaults;setenv bootargs \${bootargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} ip=\${ip_method}
+device_args=ip=\${ip_method}
 
-mmc_load_uimage=run xyz_mmcboot; run mmc_args; bootm \${address_uimage} \${address_uinitrd}
+mmc_load_uimage=run xyz_mmcboot; run bootargs_defaults; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
 uenv_normalboot_cmd
         ;;
 esac
