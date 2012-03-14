@@ -20,7 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-#Notes: need to check for: parted, fdisk, wget, mkfs.*, mkimage, md5sum
+#REQUIREMENTS:
+#uEnv.txt bootscript support
 
 unset MMC
 unset FIRMWARE
@@ -1124,18 +1125,6 @@ function check_uboot_type {
 		is_omap
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
-		;;
-	touchbook)
-		SYSTEM="touchbook"
-		DO_UBOOT=1
-		BOOTLOADER="TOUCHBOOK"
-		SERIAL="ttyO2"
-		is_omap
-		VIDEO_TIMING="1024x600MR-16@60"
-		KMS_VIDEO_RESOLUTION="1024x600"
-
-		BETA_KERNEL=1
-		SERIAL_MODE=1
 		;;
 	crane)
 		SYSTEM="crane"
