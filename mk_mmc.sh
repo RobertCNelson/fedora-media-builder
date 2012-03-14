@@ -36,7 +36,6 @@ unset BOOTLOADER
 unset SMSC95XX_MOREMEM
 unset DD_UBOOT
 unset KERNEL_DEB
-unset USE_UENV
 unset ADDON
 
 unset SVIDEO_NTSC
@@ -363,31 +362,6 @@ function dl_firmware {
 	esac
 }
 
-function boot_files_template {
-	cat > ${TEMPDIR}/bootscripts/boot.cmd <<-__EOF__
-		SCR_FB
-		SCR_TIMING
-		SCR_VRAM
-		setenv console SERIAL_CONSOLE
-		setenv optargs VIDEO_CONSOLE
-		setenv mmcroot /dev/mmcblk0p2 ro
-		setenv mmcrootfstype FINAL_FSTYPE rootwait fixrtc
-		setenv bootcmd 'fatload mmc 0:1 UIMAGE_ADDR uImage; bootm UIMAGE_ADDR'
-		setenv bootargs console=\${console} \${optargs} root=\${mmcroot} rootfstype=\${mmcrootfstype} VIDEO_DISPLAY
-		boot
-
-	__EOF__
-}
-
-function boot_scr_to_uenv_txt {
-	cat > ${TEMPDIR}/bootscripts/uEnv.cmd <<-__EOF__
-		bootenv=boot.scr
-		loaduimage=fatload mmc \${mmcdev} \${loadaddr} \${bootenv}
-		mmcboot=echo Running boot.scr script from mmc ...; source \${loadaddr}
-
-	__EOF__
-}
-
 function boot_uenv_txt_template {
 	#(rcn-ee)in a way these are better then boot.scr
 	#but each target is going to have a slightly different entry point..
@@ -596,16 +570,9 @@ function tweak_boot_scripts {
 }
 
 function setup_bootscripts {
- mkdir -p ${TEMPDIR}/bootscripts/
-
- if [ "$USE_UENV" ];then
-  boot_uenv_txt_template
-  tweak_boot_scripts
- else
-  boot_files_template
-  boot_scr_to_uenv_txt
-  tweak_boot_scripts
- fi
+	mkdir -p ${TEMPDIR}/bootscripts/
+	boot_uenv_txt_template
+	tweak_boot_scripts
 }
 
 function extract_zimage {
@@ -770,26 +737,13 @@ function populate_boot {
   mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/${UIMAGE}
  fi
 
-if [ "$DO_UBOOT" ];then
-
-if [ "${USE_UENV}" ] ; then
- echo "Copying uEnv.txt based boot scripts to Boot Partition"
- echo "-----------------------------"
- cp -v ${TEMPDIR}/bootscripts/normal.cmd ${TEMPDIR}/disk/uEnv.txt
- cat  ${TEMPDIR}/bootscripts/normal.cmd
- echo "-----------------------------"
-else
- echo "Copying boot.scr based boot scripts to Boot Partition"
- echo "-----------------------------"
- cp -v ${TEMPDIR}/bootscripts/uEnv.cmd ${TEMPDIR}/disk/uEnv.txt
- cat ${TEMPDIR}/bootscripts/uEnv.cmd
- echo "-----------------------------"
- mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d ${TEMPDIR}/bootscripts/boot.cmd ${TEMPDIR}/disk/boot.scr
- cp -v ${TEMPDIR}/bootscripts/boot.cmd ${TEMPDIR}/disk/boot.cmd
- cat ${TEMPDIR}/bootscripts/boot.cmd
- echo "-----------------------------"
-fi
-fi
+		if [ "${DO_UBOOT}" ];then
+			echo "Copying uEnv.txt based boot scripts to Boot Partition"
+			echo "-----------------------------"
+			cp -v ${TEMPDIR}/bootscripts/normal.cmd ${TEMPDIR}/disk/uEnv.txt
+			cat  ${TEMPDIR}/bootscripts/normal.cmd
+			echo "-----------------------------"
+		fi
 
 cat > ${TEMPDIR}/readme.txt <<script_readme
 
@@ -1063,7 +1017,6 @@ function check_uboot_type {
 		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_BX"
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 		;;
 	beagle_cx)
@@ -1071,7 +1024,6 @@ function check_uboot_type {
 		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_CX"
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 		;;
 	beagle_xm)
@@ -1079,7 +1031,6 @@ function check_uboot_type {
 		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_XM"
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 		;;
 	bone)
@@ -1087,7 +1038,6 @@ function check_uboot_type {
 		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBONE_A"
 		SERIAL="ttyO0"
-		USE_UENV=1
 		is_omap
 
 		SUBARCH="omap-psp"
@@ -1099,7 +1049,6 @@ function check_uboot_type {
 		DO_UBOOT=1
 		BOOTLOADER="IGEP00X0"
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 
 		SERIAL_MODE=1
@@ -1110,7 +1059,6 @@ function check_uboot_type {
 		BOOTLOADER="PANDABOARD"
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
@@ -1121,7 +1069,6 @@ function check_uboot_type {
 		BOOTLOADER="PANDABOARD_ES"
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
@@ -1131,7 +1078,6 @@ function check_uboot_type {
 		DO_UBOOT=1
 		BOOTLOADER="CRANEBOARD"
 		SERIAL="ttyO2"
-		USE_UENV=1
 		is_omap
 
 		BETA_KERNEL=1
@@ -1143,7 +1089,6 @@ function check_uboot_type {
 		DD_UBOOT=1
 		BOOTLOADER="MX53LOCO"
 		SERIAL="ttymxc0"
-		USE_UENV=1
 		is_imx53
 		SUBARCH="imx"
 		;;
