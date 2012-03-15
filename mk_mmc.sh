@@ -714,17 +714,17 @@ function populate_boot {
    fi
   fi
 
- VMLINUZ="vmlinuz-*"
- UIMAGE="uImage"
+		VMLINUZ="vmlinuz-*"
+		if [ -f ${TEMPDIR}/kernel/boot/${VMLINUZ} ] ; then
+			LINUX_VER=$(ls ${TEMPDIR}/kernel/boot/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
+			echo "Using mkimage to create uImage"
+			echo "-----------------------------"
+			mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/uImage
+			echo "Debug: zImage for future u-boot bootz support"
+			cp -v ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/zImage
+		fi
 
- if [ -f ${TEMPDIR}/kernel/boot/${VMLINUZ} ]; then
-  LINUX_VER=$(ls ${TEMPDIR}/kernel/boot/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
-  echo "Using mkimage to create uImage"
-  echo "-----------------------------"
-  mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/${UIMAGE}
- fi
-
-		if [ "${DO_UBOOT}" ];then
+		if [ "${DO_UBOOT}" ] ; then
 			echo "Copying uEnv.txt based boot scripts to Boot Partition"
 			echo "-----------------------------"
 			cp -v ${TEMPDIR}/bootscripts/normal.cmd ${TEMPDIR}/disk/uEnv.txt
