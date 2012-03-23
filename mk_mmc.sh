@@ -415,7 +415,7 @@ function boot_uenv_txt_template {
 
 		__EOF__
 		;;
-	igepv2|crane|panda|panda_es|mx53loco)
+	igepv2|crane|panda|panda_es|mx51evk|mx53loco)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
@@ -441,7 +441,7 @@ function tweak_boot_scripts {
 
 	if [ "x${ADDON}" == "xpico" ] ; then
 		VIDEO_TIMING="640x480MR-16@60"
-		KMS_VIDEO_RESOLUTION="640x48"
+		KMS_VIDEO_RESOLUTION="640x480"
 	fi
 
 	if [ "x${ADDON}" == "xulcd" ] ; then
@@ -982,16 +982,13 @@ function is_omap {
 	unset KMS_VIDEOB
 }
 
-function is_imx53 {
- IS_IMX=1
- UIMAGE_ADDR="0x70800000"
- UINITRD_ADDR="0x72100000"
- SERIAL_CONSOLE="${SERIAL},115200"
- ZRELADD="0x70008000"
- SUBARCH="imx"
- VIDEO_CONSOLE="console=tty0"
- VIDEO_FB="mxcdi1fb"
- VIDEO_TIMING="RGB24,1280x720M@60"
+function is_imx {
+	IS_IMX=1
+	SERIAL_CONSOLE="${SERIAL},115200"
+	SUBARCH="imx"
+	VIDEO_CONSOLE="console=tty0"
+	VIDEO_FB="mxcdi1fb"
+	VIDEO_TIMING="RGB24,1280x720M@60"
 }
 
 function check_uboot_type {
@@ -1070,14 +1067,29 @@ function check_uboot_type {
 		BETA_KERNEL=1
 		SERIAL_MODE=1
 		;;
+	mx51evk)
+		SYSTEM="mx51evk"
+		DO_UBOOT=1
+		DD_UBOOT=1
+		BOOTLOADER="MX51EVK"
+		SERIAL="ttymxc0"
+		is_imx
+		ZRELADD="0x90008000"
+		UIMAGE_ADDR="0x90800000"
+		UINITRD_ADDR="0x92100000"
+		BETA_KERNEL=1
+		SERIAL_MODE=1
+		;;
 	mx53loco)
 		SYSTEM="mx53loco"
 		DO_UBOOT=1
 		DD_UBOOT=1
 		BOOTLOADER="MX53LOCO"
 		SERIAL="ttymxc0"
-		is_imx53
-		SUBARCH="imx"
+		is_imx
+		ZRELADD="0x70008000"
+		UIMAGE_ADDR="0x70800000"
+		UINITRD_ADDR="0x72100000"
 		;;
 	*)
 		IN_VALID_UBOOT=1
