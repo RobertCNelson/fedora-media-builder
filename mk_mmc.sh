@@ -19,9 +19,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+#
+# Latest can be found at:
+# http://github.com/RobertCNelson/fedora-media-builder/blob/master/mk_mmc.sh
 
 #REQUIREMENTS:
 #uEnv.txt bootscript support
+
+MIRROR="http://rcn-ee.net/deb"
+BACKUP_MIRROR="http://rcn-ee.homeip.net:81/dl/mirrors/deb"
 
 unset MMC
 unset FIRMWARE
@@ -45,10 +51,6 @@ unset SVIDEO_PAL
 
 GIT_VERSION=$(git rev-parse --short HEAD)
 IN_VALID_UBOOT=1
-
-MIRROR="http://rcn-ee.net/deb"
-BACKUP_MIRROR="http://rcn-ee.homeip.net:81/dl/mirrors/deb"
-unset RCNEEDOWN
 
 #Defaults
 ROOTFS_TYPE=ext4
@@ -193,6 +195,7 @@ function dl_bootloader {
  mkdir -p ${TEMPDIR}/dl/${DISTARCH}
  mkdir -p "${DIR}/dl/${DISTARCH}"
 
+	unset RCNEEDOWN
 	echo "attempting to use rcn-ee.net for dl files [10 second time out]..."
 	wget -T 10 -t 1 --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/tools/latest/bootloader
 
