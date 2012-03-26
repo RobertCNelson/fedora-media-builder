@@ -399,7 +399,7 @@ function boot_uenv_txt_template {
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2} musb_hdrc.fifo_mode=5
-			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; bootm \${address_uimage}
 
 		__EOF__
 		;;
@@ -407,7 +407,7 @@ function boot_uenv_txt_template {
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args mpurate=\${mpurate} buddy=\${buddy} buddy2=\${buddy2}
-			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; bootm \${address_uimage}
 
 		__EOF__
 		;;
@@ -415,14 +415,14 @@ function boot_uenv_txt_template {
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
-			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; bootm \${address_uimage}
 
 		__EOF__
 		;;
 	bone)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			deviceargs=setenv device_args ip=\${ip_method}
-			mmc_load_uimage=run xyz_mmcboot; run bootargs_defaults; run deviceargs; run mmcargs; bootm \${address_uimage} \${address_uinitrd}
+			mmc_load_uimage=run xyz_mmcboot; run bootargs_defaults; run deviceargs; run mmcargs; bootm \${address_uimage}
 
 		__EOF__
 		;;
