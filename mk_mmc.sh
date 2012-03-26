@@ -823,13 +823,13 @@ function populate_rootfs {
 
  if mount -t ${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
- if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ] ; then
-   pv "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | sudo tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
-   echo "Transfer of Base Rootfs Complete, syncing to disk"
-   echo "-----------------------------"
-   sync
-   sync
- fi
+		if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ] ; then
+			pv "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+			echo "Transfer of Base Rootfs is Complete, now syncing to disk..."
+			sync
+			sync
+			echo "-----------------------------"
+		fi
 
  #FIXME:
  DISTARCH="wheezy-${ARCH}"
