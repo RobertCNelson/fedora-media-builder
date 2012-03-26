@@ -254,14 +254,7 @@ function dl_kernel_image {
 			FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $8}')
 		else
 			#http://rcn-ee.net/deb/squeeze-armel/v3.2.6-x4/install-me.sh
-			FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')		;;
-	mx53loco)
-		SYSTEM="mx53loco"
-		DO_UBOOT=1
-		DD_UBOOT=1
-		BOOTLOADER="MX53LOCO"
-		SERIAL="ttymxc0"
-		is_imx53
+			FTP_DIR=$(echo ${FTP_DIR} | awk -F'/' '{print $6}')
 		fi
 		KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
 
