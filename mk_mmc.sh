@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # Copyright (c) 2009-2012 Robert Nelson <robertcnelson@gmail.com>
 #
@@ -29,22 +29,28 @@
 MIRROR="http://rcn-ee.net/deb"
 BACKUP_MIRROR="http://rcn-ee.homeip.net:81/dl/mirrors/deb"
 
+BOOT_LABEL="boot"
+PARTITION_PREFIX=""
+
 unset MMC
+unset SPL_BOOT
+unset BOOTLOADER
+unset USE_BETA_BOOTLOADER
+unset DD_UBOOT
+unset ADDON
+
+#Common KMS:
+unset USE_KMS
+unset KMS_OVERRIDE
+
 unset FIRMWARE
 unset SERIAL_MODE
-unset USE_BETA_BOOTLOADER
 unset BETA_KERNEL
 unset EXPERIMENTAL_KERNEL
 unset USB_ROOTFS
 unset PRINTK
-unset SPL_BOOT
-unset BOOTLOADER
 unset SMSC95XX_MOREMEM
-unset DD_UBOOT
 unset KERNEL_DEB
-unset USE_KMS
-unset KMS_OVERRIDE
-unset ADDON
 
 unset SVIDEO_NTSC
 unset SVIDEO_PAL
@@ -53,7 +59,8 @@ GIT_VERSION=$(git rev-parse --short HEAD)
 IN_VALID_UBOOT=1
 
 #Defaults
-ROOTFS_TYPE=ext4
+ROOTFS_TYPE="ext4"
+ROOTFS_LABEL="rootfs"
 
 DIST="f14"
 ACTUAL_DIST="f14"
@@ -62,10 +69,6 @@ DISTARCH="${DIST}-${ARCH}"
 
 USER="root"
 PASS="fedoraarm"
-
-BOOT_LABEL=boot
-ROOTFS_LABEL=rootfs
-PARTITION_PREFIX=""
 
 FEDORA_MIRROR="http://fedora.roving-it.com/"
 
