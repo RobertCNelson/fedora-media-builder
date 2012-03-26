@@ -1333,10 +1333,10 @@ while [ ! -z "$1" ]; do
             DEB_FILE="$2"
             KERNEL_DEB=1
             ;;
-        --beta-kernel)
+        --use-beta-kernel)
             BETA_KERNEL=1
             ;;
-        --experimental-kernel)
+        --use-experimental-kernel)
             EXPERIMENTAL_KERNEL=1
             ;;
         --use-beta-bootloader)
