@@ -163,6 +163,7 @@ function detect_software {
 	check_for_command parted parted
 	check_for_command dpkg dpkg
 	check_for_command patch patch
+	check_for_command pv pv
 
 	if [ "${NEEDS_COMMAND}" ] ; then
 		echo ""
