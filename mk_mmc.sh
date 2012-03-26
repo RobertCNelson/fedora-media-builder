@@ -887,10 +887,9 @@ function populate_rootfs {
 		;;
 	esac
 
-if [ "$BTROOTFS_TYPE_FSTAB" ] ; then
- sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
-fi
-
+		if [ "${BTRFS_FSTAB}" ] ; then
+			sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
+		fi
 
 	case "${DISTRO_TYPE}" in
 	f14-armel)
@@ -1401,7 +1400,8 @@ if ! is_valid_rootfs_type ${ROOTFS_TYPE} ; then
 	exit
 fi
 
-if [ "${ROOTFS_TYPE}" = "btrfs" ] ; then
+unset BTRFS_FSTAB
+if [ "x${ROOTFS_TYPE}" == "xbtrfs" ] ; then
 	BTRFS_FSTAB=1
 fi
 
