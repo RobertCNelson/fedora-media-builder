@@ -47,7 +47,6 @@ unset BETA_KERNEL
 unset EXPERIMENTAL_KERNEL
 unset USB_ROOTFS
 unset PRINTK
-unset SMSC95XX_MOREMEM
 unset KERNEL_DEB
 
 unset SVIDEO_NTSC
@@ -1015,6 +1014,7 @@ function check_uboot_type {
 	unset SPL_BOOT
 	unset DO_UBOOT
 	unset IN_VALID_UBOOT
+	unset SMSC95XX_MOREMEM
 
 	case "${UBOOT_TYPE}" in
 	beagle_bx)
