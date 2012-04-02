@@ -434,7 +434,7 @@ function boot_uenv_txt_template {
 
 		__EOF__
 		;;
-	igepv2|crane|panda|mx51evk|mx53loco)
+	igepv2|crane|mx51evk|mx53loco)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
@@ -442,7 +442,7 @@ function boot_uenv_txt_template {
 
 		__EOF__
 		;;
-	panda_es)
+	panda|panda_es)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
@@ -1134,6 +1134,7 @@ function check_uboot_type {
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
 		is_omap
+		USE_ZIMAGE=1
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
 		;;
@@ -1156,6 +1157,7 @@ function check_uboot_type {
 		SERIAL="ttyO2"
 		USE_KMS=1
 		is_omap
+		USE_ZIMAGE=1
 
 		unset VIDEO_DRV
 		unset VIDEO_OMAP_RAM
