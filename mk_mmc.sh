@@ -1091,6 +1091,7 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBOARD_XM"
 		SERIAL="ttyO2"
 		is_omap
+		USE_ZIMAGE=1
 		;;
 	beagle_xm_kms)
 		SYSTEM="beagle_xm"
@@ -1099,6 +1100,7 @@ function check_uboot_type {
 		SERIAL="ttyO2"
 		USE_KMS=1
 		is_omap
+		USE_ZIMAGE=1
 
 		unset VIDEO_DRV
 		unset VIDEO_OMAP_RAM
