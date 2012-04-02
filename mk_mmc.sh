@@ -453,7 +453,7 @@ function boot_uenv_txt_template {
 	bone)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			deviceargs=setenv device_args ip=\${ip_method}
-			mmc_load_uimage=run xyz_mmcboot; run bootargs_defaults; run deviceargs; run mmcargs; bootm \${address_uimage}
+			mmc_load_uimage=run xyz_mmcboot; run bootargs_defaults; run deviceargs; run mmcargs; \${boot} \${address_image}
 
 		__EOF__
 		;;
