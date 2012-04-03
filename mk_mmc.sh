@@ -426,7 +426,7 @@ function boot_uenv_txt_template {
 
 		__EOF__
 		;;
-	igepv2|crane)
+	igepv2)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
@@ -434,7 +434,7 @@ function boot_uenv_txt_template {
 
 		__EOF__
 		;;
-	mx51evk|mx53loco|panda|panda_es)
+	crane|mx51evk|mx53loco|panda|panda_es)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
@@ -1166,6 +1166,7 @@ function check_uboot_type {
 		BOOTLOADER="CRANEBOARD"
 		SERIAL="ttyO2"
 		is_omap
+		USE_ZIMAGE=1
 
 		BETA_KERNEL=1
 		SERIAL_MODE=1
