@@ -426,15 +426,7 @@ function boot_uenv_txt_template {
 
 		__EOF__
 		;;
-	igepv2)
-		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
-			optargs=VIDEO_CONSOLE
-			deviceargs=setenv device_args
-			loaduimage=run xyz_mmcboot; run deviceargs; run mmcargs; \${boot} \${address_image}
-
-		__EOF__
-		;;
-	crane|mx51evk|mx53loco|panda|panda_es)
+	crane|igepv2|mx51evk|mx53loco|panda|panda_es)
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			optargs=VIDEO_CONSOLE
 			deviceargs=setenv device_args
@@ -1118,6 +1110,7 @@ function check_uboot_type {
 		BOOTLOADER="IGEP00X0"
 		SERIAL="ttyO2"
 		is_omap
+		USE_ZIMAGE=1
 
 		SERIAL_MODE=1
 		;;
