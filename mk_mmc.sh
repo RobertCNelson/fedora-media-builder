@@ -59,11 +59,15 @@ IN_VALID_UBOOT=1
 ROOTFS_TYPE="ext4"
 ROOTFS_LABEL="rootfs"
 
+#use wheezy kernel debs
+DEBIAN="wheezy"
+
 DIST="f14"
 ACTUAL_DIST="f14"
 ARCH="armel"
 DISTARCH="${DIST}-${ARCH}"
 DISTRO="f14-armel"
+DEBARCH="${DEBIAN}-${ARCH}"
 
 USER="root"
 PASS="fedoraarm"
@@ -230,25 +234,24 @@ function dl_bootloader {
 }
 
 function dl_kernel_image {
- echo ""
- echo "Downloading Device's Kernel Image"
- echo "-----------------------------"
+	echo ""
+	echo "Downloading Device's Kernel Image"
+	echo "-----------------------------"
 
- KERNEL_SEL="STABLE"
+	KERNEL_SEL="STABLE"
 
- if [ "$BETA_KERNEL" ];then
-  KERNEL_SEL="TESTING"
- fi
+	if [ "${BETA_KERNEL}" ] ; then
+		KERNEL_SEL="TESTING"
+	fi
 
- if [ "$EXPERIMENTAL_KERNEL" ];then
-  KERNEL_SEL="EXPERIMENTAL"
- fi
+	if [ "${EXPERIMENTAL_KERNEL}" ] ; then
+		KERNEL_SEL="EXPERIMENTAL"
+	fi
 
-	#FIXME: use Wheezy kernel for now
-	DISTARCH="wheezy-${ARCH}"
+	mkdir -p ${DIR}/dl/${DEBARCH}
 
- if [ ! "${KERNEL_DEB}" ] ; then
-  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/${DISTARCH}/LATEST-${SUBARCH}
+	if [ ! "${KERNEL_DEB}" ] ; then
+		wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/${DEBARCH}/LATEST-${SUBARCH}
 
 		if [ "$RCNEEDOWN" ] ; then
 			sed -i -e "s/rcn-ee.net/rcn-ee.homeip.net:81/g" ${TEMPDIR}/dl/LATEST-${SUBARCH}
@@ -265,28 +268,21 @@ function dl_kernel_image {
 		fi
 		KERNEL=$(echo ${FTP_DIR} | sed 's/v//')
 
-		wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/${DISTARCH}/${FTP_DIR}/
+		wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MIRROR}/${DEBARCH}/${FTP_DIR}/
 		ACTUAL_DEB_FILE=$(cat ${TEMPDIR}/dl/index.html | grep linux-image)
 		ACTUAL_DEB_FILE=$(echo ${ACTUAL_DEB_FILE} | awk -F ".deb" '{print $1}')
 		ACTUAL_DEB_FILE=${ACTUAL_DEB_FILE##*linux-image-}
 		ACTUAL_DEB_FILE="linux-image-${ACTUAL_DEB_FILE}.deb"
 
-  wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" ${MIRROR}/${DISTARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
-  if [ "${DI_BROKEN_USE_CROSS}" ] ; then
-   CROSS_DEB_FILE=$(echo ${ACTUAL_DEB_FILE} | sed 's:'${DIST}':cross:g')
-   wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" ${MIRROR}/cross/v${KERNEL}/${CROSS_DEB_FILE}
-  fi
- else
-  KERNEL=${DEB_FILE}
-  #Remove all "\" from file name.
-  ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
-  cp -v ${DEB_FILE} "${DIR}/dl/${DISTARCH}/"
- fi
+		wget -c --directory-prefix="${DIR}/dl/${DEBARCH}" ${MIRROR}/${DEBARCH}/v${KERNEL}/${ACTUAL_DEB_FILE}
+	else
+		KERNEL=${DEB_FILE}
+		#Remove all "\" from file name.
+		ACTUAL_DEB_FILE=$(echo ${DEB_FILE} | sed 's!.*/!!' | grep linux-image)
+		cp -v ${DEB_FILE} "${DIR}/dl/${DEBARCH}/"
+	fi
 
- #FIXME: reset back to fedora
- DISTARCH="${ACTUAL_DIST}-${ARCH}"
-
- echo "Using: ${ACTUAL_DEB_FILE}"
+	echo "Using: ${ACTUAL_DEB_FILE}"
 }
 
 function dl_root_image {
@@ -594,17 +590,9 @@ function setup_bootscripts {
 }
 
 function extract_zimage {
- mkdir -p ${TEMPDIR}/kernel
- echo "Extracting Kernel Boot Image"
- #FIXME
- DISTARCH="wheezy-${ARCH}"
- if [ ! "${DI_BROKEN_USE_CROSS}" ] ; then
-  dpkg -x "${DIR}/dl/${DISTARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/kernel
- else
-  dpkg -x "${DIR}/dl/${DISTARCH}/${CROSS_DEB_FILE}" ${TEMPDIR}/kernel
- fi
- #FIXME
- DISTARCH="${ACTUAL_DIST}-${ARCH}"
+	mkdir -p ${TEMPDIR}/kernel
+	echo "Extracting Kernel Boot Image"
+	dpkg -x "${DIR}/dl/${DEBARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/kernel
 }
 
 function unmount_all_drive_partitions {
@@ -899,11 +887,7 @@ function populate_rootfs {
 			echo "-----------------------------"
 		fi
 
- #FIXME:
- DISTARCH="wheezy-${ARCH}"
- dpkg -x "${DIR}/dl/${DISTARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
- #FIXME:
- DISTARCH="${ACTUAL_DIST}-${ARCH}"
+	dpkg -x "${DIR}/dl/${DEBARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
 
 	case "${DISTRO}" in
 	f14-armel)
@@ -1265,6 +1249,7 @@ function check_distro {
 		USER="root"
 		PASS="fedoraarm"
 		DISTRO="f14-armel"
+		DEBARCH="${DEBIAN}-${ARCH}"
 		;;
 	f17-armel|f17-sfp)
 		DIST=f17
@@ -1273,6 +1258,7 @@ function check_distro {
 		USER="root"
 		PASS="fedoraarm"
 		DISTRO="f17-armel"
+		DEBARCH="${DEBIAN}-${ARCH}"
 		;;
 	f17-armhf|f17-hfp)
 		DIST=f17
@@ -1281,6 +1267,7 @@ function check_distro {
 		USER="root"
 		PASS="fedoraarm"
 		DISTRO="f17-armhf"
+		DEBARCH="${DEBIAN}-${ARCH}"
 		;;
 	*)
 		IN_VALID_DISTRO=1
