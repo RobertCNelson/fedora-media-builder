@@ -909,6 +909,18 @@ function populate_rootfs {
 		#LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
 		sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
 		sed -i 's:ext3:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
+
+		cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<-__EOF__
+			start on stopped rc RUNLEVEL=[2345]
+			stop on runlevel [016]
+			
+			instance ttyO2
+			respawn
+			pre-start exec /sbin/securetty ttyO2
+			exec /sbin/agetty /dev/ttyO2 115200
+
+		__EOF__
+
 		;;
 	f17-armel|f17-armhf)
 		#LABEL="rootfs"          /                       ext4    defaults        1 1
@@ -921,32 +933,15 @@ function populate_rootfs {
 			sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
 		fi
 
-	case "${DISTRO_TYPE}" in
-	f14-armel)
-		cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<-__EOF__
-			start on stopped rc RUNLEVEL=[2345]
-			stop on starting runlevel [016]
-			
-			respawn
-			exec /sbin/agetty /dev/ttyO2 115200
-		__EOF__
-
-		;;
-	esac
-
-#So most of the default images use ttyO2, but the bone uses ttyO0, need to find a better way..
-if test "-$SERIAL-" != "-ttyO2-"
-then
- if ls ${TEMPDIR}/disk/etc/init/ttyO2.conf >/dev/null 2>&1;then
-  echo "Fedora: Serial Login: fixing /etc/init/ttyO2.conf to use ${SERIAL}"
-  echo "-----------------------------"
-  mv ${TEMPDIR}/disk/etc/init/ttyO2.conf ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
-  sed -i -e 's:ttyO2:'$SERIAL':g' ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
- fi
-fi
-
- echo "Fedora: Adding root login over serial: ${SERIAL} to /etc/securetty"
- cat ${TEMPDIR}/disk/etc/securetty | grep ${SERIAL} || echo ${SERIAL} >> ${TEMPDIR}/disk/etc/securetty
+	#So most of the default images use ttyO2, but the bone uses ttyO0, need to find a better way..
+	if [ "x${SERIAL}" != "xttyO2" ] ; then 
+		if [ -f ${TEMPDIR}/disk/etc/init/ttyO2.conf ] ; then
+			echo "Fedora: Serial Login: fixing /etc/init/ttyO2.conf to use ${SERIAL}"
+			echo "-----------------------------"
+			mv ${TEMPDIR}/disk/etc/init/ttyO2.conf ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
+			sed -i -e 's:ttyO2:'$SERIAL':g' ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
+		fi
+	fi
 
 	cat >> ${TEMPDIR}/disk/etc/rc.d/rc.sysinit <<-__EOF__
 		#!/bin/sh
