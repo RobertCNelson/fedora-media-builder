@@ -63,10 +63,8 @@ ROOTFS_LABEL="rootfs"
 DEBIAN="wheezy"
 
 DIST="f14"
-ACTUAL_DIST="f14"
 ARCH="armel"
-DISTARCH="${DIST}-${ARCH}"
-DISTRO="f14-armel"
+DISTRO="${DIST}-${ARCH}"
 DEBARCH="${DEBIAN}-${ARCH}"
 
 USER="root"
@@ -197,8 +195,8 @@ function dl_bootloader {
  echo "Downloading Device's Bootloader"
  echo "-----------------------------"
 
- mkdir -p ${TEMPDIR}/dl/${DISTARCH}
- mkdir -p "${DIR}/dl/${DISTARCH}"
+ mkdir -p ${TEMPDIR}/dl/${DISTRO}
+ mkdir -p "${DIR}/dl/${DISTRO}"
 
 	unset RCNEEDOWN
 	echo "attempting to use rcn-ee.net for dl files [10 second time out]..."
@@ -305,19 +303,19 @@ function dl_root_image {
 		;;
 	esac
 
-	if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ]; then
-		MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
-		if [ "=$ROOTFS_MD5SUM=" != "=$MD5SUM=" ]; then
+	if [ -f "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" ]; then
+		MD5SUM=$(md5sum "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | awk '{print $1}')
+		if [ "x${ROOTFS_MD5SUM}" != "x${MD5SUM}" ]; then
 			echo "Note: md5sum has changed: $MD5SUM"
 			echo "-----------------------------"
-			rm -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" || true
-			wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
-			NEW_MD5SUM=$(md5sum "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | awk '{print $1}')
+			rm -f "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" || true
+			wget --directory-prefix="${DIR}/dl/${DISTRO}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+			NEW_MD5SUM=$(md5sum "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | awk '{print $1}')
 			echo "Note: new md5sum $NEW_MD5SUM"
 			echo "-----------------------------"
 		fi
 	else
-		wget --directory-prefix="${DIR}/dl/${DISTARCH}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
+		wget --directory-prefix="${DIR}/dl/${DISTRO}" ${FEDORA_MIRROR}/${ROOTFS_IMAGE}
 	fi
 }
 
@@ -341,20 +339,20 @@ function dl_firmware {
 	case "${DISTRO}" in
 	f14-armel)
 		#V3.1 needs 1.9.4 for ar9170
-		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
-		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+		#wget -c --directory-prefix="${DIR}/dl/${DISTRO}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+		wget -c --directory-prefix="${DIR}/dl/${DISTRO}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
 		AR9170_FW="carl9170-1.fw"
 		;;
 	f17-armel)
 		#V3.1 needs 1.9.4 for ar9170
-		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
-		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+		#wget -c --directory-prefix="${DIR}/dl/${DISTRO}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+		wget -c --directory-prefix="${DIR}/dl/${DISTRO}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
 		AR9170_FW="carl9170-1.fw"
 		;;
 	f17-armhf)
 		#V3.1 needs 1.9.4 for ar9170
-		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
-		wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
+		#wget -c --directory-prefix="${DIR}/dl/${DISTRO}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
+		wget -c --directory-prefix="${DIR}/dl/${DISTRO}" http://rcn-ee.net/firmware/carl9170/1.9.4/carl9170-1.fw
 		AR9170_FW="carl9170-1.fw"
 		;;
 	esac
@@ -879,8 +877,8 @@ function populate_rootfs {
 
  if mount -t ${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
-		if [ -f "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" ] ; then
-			pv "${DIR}/dl/${DISTARCH}/${ROOTFS_IMAGE}" | tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+		if [ -f "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" ] ; then
+			pv "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
 			echo "Transfer of Base Rootfs is Complete, now syncing to disk..."
 			sync
 			sync
@@ -1245,28 +1243,25 @@ function check_distro {
 	f14-armel|f14-sfp|f14)
 		DIST=f14
 		ARCH=armel
-		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
-		DISTRO="f14-armel"
+		DISTRO="${DIST}-${ARCH}"
 		DEBARCH="${DEBIAN}-${ARCH}"
 		;;
 	f17-armel|f17-sfp)
 		DIST=f17
 		ARCH=armel
-		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
-		DISTRO="f17-armel"
+		DISTRO="${DIST}-${ARCH}"
 		DEBARCH="${DEBIAN}-${ARCH}"
 		;;
 	f17-armhf|f17-hfp)
 		DIST=f17
 		ARCH=armhf
-		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
-		DISTRO="f17-armhf"
+		DISTRO="${DIST}-${ARCH}"
 		DEBARCH="${DEBIAN}-${ARCH}"
 		;;
 	*)
@@ -1274,8 +1269,6 @@ function check_distro {
 		usage
 		;;
 	esac
-
-	DISTARCH="${DIST}-${ARCH}"
 }
 
 function usage {
