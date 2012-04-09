@@ -732,6 +732,7 @@ function populate_boot {
 			if [ -f ${TEMPDIR}/dl/${MLO} ]; then
 				cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/MLO
 				cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/backup/MLO
+				echo "-----------------------------"
 			fi
 		fi
 
@@ -740,9 +741,11 @@ function populate_boot {
 				if echo ${UBOOT} | grep img > /dev/null 2>&1;then
 					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.img
 					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/backup/u-boot.img
+					echo "-----------------------------"
 				else
 					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.bin
 					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/backup/u-boot.bin
+					echo "-----------------------------"
 				fi
 			fi
 		fi
@@ -750,11 +753,14 @@ function populate_boot {
 		VMLINUZ="vmlinuz-*"
 		if [ -f ${TEMPDIR}/kernel/boot/${VMLINUZ} ] ; then
 			LINUX_VER=$(ls ${TEMPDIR}/kernel/boot/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
-			echo "Using mkimage to create uImage"
-			echo "-----------------------------"
-			mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/uImage
-			echo "Debug: zImage for future u-boot bootz support"
+			if [ ! "${USE_ZIMAGE}" ] ; then
+				echo "Using mkimage to create uImage"
+				mkimage -A arm -O linux -T kernel -C none -a ${ZRELADD} -e ${ZRELADD} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/uImage
+				echo "-----------------------------"
+			fi
+			echo "Copying Kernel image:"
 			cp -v ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/zImage
+			echo "-----------------------------"
 		fi
 
 		echo "Copying uEnv.txt based boot scripts to Boot Partition"
