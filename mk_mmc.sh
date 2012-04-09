@@ -70,8 +70,6 @@ DEBARCH="${DEBIAN}-${ARCH}"
 USER="root"
 PASS="fedoraarm"
 
-FEDORA_MIRROR="http://fedora.roving-it.com/"
-
 F14_IMAGE="rootfs-f14-minimal-RC1.tar.bz2"
 F14_MD5SUM="83f80747f76b23aa4464b0afd2f3c6db"
 
@@ -292,14 +290,17 @@ function dl_root_image {
 	f14-armel)
 		ROOTFS_MD5SUM=$F14_MD5SUM
 		ROOTFS_IMAGE=$F14_IMAGE
+		FEDORA_MIRROR="http://fedora.roving-it.com/"
 		;;
 	f17-armel)
 		ROOTFS_MD5SUM=$F17_SF_MD5SUM
 		ROOTFS_IMAGE=$F17_SF_IMAGE
+		FEDORA_MIRROR="http://fedora.roving-it.com/"
 		;;
 	f17-armhf)
 		ROOTFS_MD5SUM=$F17_HF_MD5SUM
 		ROOTFS_IMAGE=$F17_HF_IMAGE
+		FEDORA_MIRROR="http://fedora.roving-it.com/"
 		;;
 	esac
 
@@ -878,7 +879,11 @@ function populate_rootfs {
  if mount -t ${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 ${TEMPDIR}/disk; then
 
 		if [ -f "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" ] ; then
-			pv "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | tar --numeric-owner --preserve-permissions -xjf - -C ${TEMPDIR}/disk/
+
+			echo "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | grep ".bz2" && DECOM="xjf"
+			echo "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | grep ".xz" && DECOM="xJf"
+
+			pv "${DIR}/dl/${DISTRO}/${ROOTFS_IMAGE}" | tar --numeric-owner --preserve-permissions -${DECOM} - -C ${TEMPDIR}/disk/
 			echo "Transfer of Base Rootfs is Complete, now syncing to disk..."
 			sync
 			sync
