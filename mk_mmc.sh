@@ -293,7 +293,7 @@ function dl_root_image {
 	echo "Downloading Fedora Root Image"
 	echo "-----------------------------"
 
-	case "${DISTARCH}" in
+	case "${DISTRO}" in
 	f14-armel)
 		ROOTFS_MD5SUM=$F14_MD5SUM
 		ROOTFS_IMAGE=$F14_IMAGE
@@ -341,7 +341,7 @@ function dl_firmware {
 		cd "${DIR}/"
 	fi
 
-	case "${DISTARCH}" in
+	case "${DISTRO}" in
 	f14-armel)
 		#V3.1 needs 1.9.4 for ar9170
 		#wget -c --directory-prefix="${DIR}/dl/${DISTARCH}" http://www.kernel.org/pub/linux/kernel/people/chr/carl9170/fw/1.9.4/carl9170-1.fw
@@ -904,7 +904,7 @@ function populate_rootfs {
  #FIXME:
  DISTARCH="${ACTUAL_DIST}-${ARCH}"
 
-	case "${DISTRO_TYPE}" in
+	case "${DISTRO}" in
 	f14-armel)
 		#LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
 		sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
@@ -1263,6 +1263,7 @@ function check_distro {
 		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
+		DISTRO="f14-armel"
 		;;
 	f17-armel|f17-sfp)
 		DIST=f17
@@ -1270,6 +1271,7 @@ function check_distro {
 		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
+		DISTRO="f17-armel"
 		;;
 	f17-armhf|f17-hfp)
 		DIST=f17
@@ -1277,6 +1279,7 @@ function check_distro {
 		ACTUAL_DIST="${DIST}"
 		USER="root"
 		PASS="fedoraarm"
+		DISTRO="f17-armhf"
 		;;
 	*)
 		IN_VALID_DISTRO=1
