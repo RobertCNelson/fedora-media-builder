@@ -63,6 +63,7 @@ DIST="f14"
 ACTUAL_DIST="f14"
 ARCH="armel"
 DISTARCH="${DIST}-${ARCH}"
+DISTRO="f14-armel"
 
 USER="root"
 PASS="fedoraarm"
