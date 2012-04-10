@@ -554,6 +554,9 @@ function tweak_boot_scripts {
 			sed -i -e 's:UENV_TIMING::g' ${TEMPDIR}/bootscripts/${ALL}
 		fi
 		sed -i -e 's:VIDEO_DISPLAY ::g' ${TEMPDIR}/bootscripts/${ALL}
+
+		#optargs=VIDEO_CONSOLE -> optargs=
+		sed -i -e 's:VIDEO_CONSOLE::g' ${TEMPDIR}/bootscripts/${ALL}
 	fi
 }
 
