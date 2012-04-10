@@ -1074,10 +1074,6 @@ function check_uboot_type {
 
 		USE_KMS=1
 		unset HAS_OMAPFB_DSS2
-		unset VIDEO_DRV
-		unset VIDEO_OMAP_RAM
-		unset VIDEO_OMAPFB_MODE
-		unset VIDEO_TIMING
 
 		BETA_KERNEL=1
 		;;
@@ -1093,8 +1089,6 @@ function check_uboot_type {
 		SERIAL_MODE=1
 
 		unset HAS_OMAPFB_DSS2
-		unset VIDEO_OMAPFB_MODE
-		unset VIDEO_TIMING
 		unset KMS_VIDEOA
 		;;
 	bone_zimage)
@@ -1112,8 +1106,6 @@ function check_uboot_type {
 		SERIAL_MODE=1
 
 		unset HAS_OMAPFB_DSS2
-		unset VIDEO_OMAPFB_MODE
-		unset VIDEO_TIMING
 		unset KMS_VIDEOA
 		;;
 	igepv2)
@@ -1159,10 +1151,6 @@ function check_uboot_type {
 
 		USE_KMS=1
 		unset HAS_OMAPFB_DSS2
-		unset VIDEO_DRV
-		unset VIDEO_OMAP_RAM
-		unset VIDEO_OMAPFB_MODE
-		unset VIDEO_TIMING
 		KMS_VIDEOB="video=HDMI-A-1"
 
 		BETA_KERNEL=1
