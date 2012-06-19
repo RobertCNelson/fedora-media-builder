@@ -367,14 +367,14 @@ function boot_uenv_txt_template {
 	if [ ! "${USE_ZIMAGE}" ] ; then
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			kernel_file=uImage
-			bootinitrd=uInitrd
+			initrd_file=uInitrd
 			boot=bootm
 
 		__EOF__
 	else
 		cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 			kernel_file=zImage
-			bootinitrd=initrd.img
+			initrd_file=initrd.img
 			boot=bootz
 
 		__EOF__
@@ -390,7 +390,7 @@ function boot_uenv_txt_template {
 		mmcrootfstype=FINAL_FSTYPE rootwait fixrtc
 
 		xyz_load_image=fatload mmc 0:1 \${kernel_addr} \${kernel_file}
-		xyz_load_initrd=fatload mmc 0:1 \${address_initrd} \${bootinitrd}
+		xyz_load_initrd=fatload mmc 0:1 \${address_initrd} \${initrd_file}
 
 		xyz_mmcboot=run xyz_load_image; echo Booting from mmc ...
 
