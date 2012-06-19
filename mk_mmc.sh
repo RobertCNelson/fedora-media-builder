@@ -382,7 +382,7 @@ function boot_uenv_txt_template {
 
 	cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 		address_image=kernel_addr
-		address_initrd=INITRD_ADDR
+		address_initrd=initrd_addr
 
 		console=SERIAL_CONSOLE
 
@@ -478,7 +478,7 @@ function tweak_boot_scripts {
 	sed -i -e 's:kernel_addr:'$kernel_addr':g' ${TEMPDIR}/bootscripts/${ALL}
 
 	#Set initrd boot address
-	sed -i -e 's:INITRD_ADDR:'$INITRD_ADDR':g' ${TEMPDIR}/bootscripts/${ALL}
+	sed -i -e 's:initrd_addr:'$initrd_addr':g' ${TEMPDIR}/bootscripts/${ALL}
 
 	#Set the Serial Console
 	sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/${ALL}
@@ -732,6 +732,7 @@ function populate_boot {
 			format=1.0
 			board=${BOOTLOADER}
 			kernel_addr=${kernel_addr}
+			initrd_addr=${initrd_addr}
 
 		__EOF__
 
@@ -1005,7 +1006,7 @@ function is_omap {
 	SUBARCH="omap"
 
 	kernel_addr="0x80300000"
-	INITRD_ADDR="0x81600000"
+	initrd_addr="0x81600000"
 
 	ZRELADD="0x80008000"
 
@@ -1183,7 +1184,7 @@ function check_uboot_type {
 		USE_ZIMAGE=1
 		ZRELADD="0x90008000"
 		kernel_addr="0x90800000"
-		INITRD_ADDR="0x92100000"
+		initrd_addr="0x92100000"
 		BETA_KERNEL=1
 		SERIAL_MODE=1
 		;;
@@ -1197,7 +1198,7 @@ function check_uboot_type {
 		USE_ZIMAGE=1
 		ZRELADD="0x70008000"
 		kernel_addr="0x70800000"
-		INITRD_ADDR="0x72100000"
+		initrd_addr="0x72100000"
 		BETA_KERNEL=1
 		SERIAL_MODE=1
 		;;
