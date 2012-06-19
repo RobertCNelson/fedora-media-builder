@@ -382,7 +382,7 @@ function boot_uenv_txt_template {
 
 	cat >> ${TEMPDIR}/bootscripts/normal.cmd <<-__EOF__
 		kernel_addr=${kernel_addr}
-		address_initrd=initrd_addr
+		initrd_addr=${initrd_addr}
 
 		console=SERIAL_CONSOLE
 
@@ -390,7 +390,7 @@ function boot_uenv_txt_template {
 		mmcrootfstype=FINAL_FSTYPE rootwait fixrtc
 
 		xyz_load_image=fatload mmc 0:1 \${kernel_addr} \${kernel_file}
-		xyz_load_initrd=fatload mmc 0:1 \${address_initrd} \${initrd_file}
+		xyz_load_initrd=fatload mmc 0:1 \${initrd_addr} \${initrd_file}
 
 		xyz_mmcboot=run xyz_load_image; echo Booting from mmc ...
 
@@ -474,9 +474,6 @@ function tweak_boot_scripts {
 	fi
 
 	ALL="*.cmd"
-	#Set initrd boot address
-	sed -i -e 's:initrd_addr:'$initrd_addr':g' ${TEMPDIR}/bootscripts/${ALL}
-
 	#Set the Serial Console
 	sed -i -e 's:SERIAL_CONSOLE:'$SERIAL_CONSOLE':g' ${TEMPDIR}/bootscripts/${ALL}
 
