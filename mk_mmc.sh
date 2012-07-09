@@ -34,7 +34,6 @@ PARTITION_PREFIX=""
 
 unset MMC
 unset USE_BETA_BOOTLOADER
-unset DD_UBOOT
 unset ADDON
 
 #Common KMS:
@@ -209,17 +208,23 @@ function dl_bootloader {
 		ABI="ABI2"
 	fi
 
- if [ "${SPL_BOOT}" ] ; then
-  MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${BOOTLOADER}:SPL" | awk '{print $2}')
-  wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MLO}
-  MLO=${MLO##*/}
-  echo "SPL Bootloader: ${MLO}"
- fi
+	if [ "${spl_name}" ] ; then
+		MLO=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${BOOTLOADER}:${SPL}" | awk '{print $2}')
+		wget --no-verbose --directory-prefix=${TEMPDIR}/dl/ ${MLO}
+		MLO=${MLO##*/}
+		echo "SPL Bootloader: ${MLO}"
+	else
+		unset MLO
+	fi
 
-	UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${BOOTLOADER}:BOOT" | awk '{print $2}')
-	wget --directory-prefix=${TEMPDIR}/dl/ ${UBOOT}
-	UBOOT=${UBOOT##*/}
-	echo "UBOOT Bootloader: ${UBOOT}"
+	if [ "${boot_name}" ] ; then
+		UBOOT=$(cat ${TEMPDIR}/dl/bootloader | grep "${ABI}:${BOOTLOADER}:BOOT" | awk '{print $2}')
+		wget --directory-prefix=${TEMPDIR}/dl/ ${UBOOT}
+		UBOOT=${UBOOT##*/}
+		echo "UBOOT Bootloader: ${UBOOT}"
+	else
+		unset UBOOT
+	fi
 }
 
 function dl_kernel_image {
@@ -663,15 +668,17 @@ function format_boot_partition {
 }
 
 function create_partitions {
-	if [ "${DD_UBOOT}" ] ; then
-		dd_to_drive
-	else
+	case "${bootloader_location}" in
+	omap_fatfs_boot_part)
 		omap_fatfs_boot_part
-	fi
-
- calculate_rootfs_partition
- format_boot_partition
- format_rootfs_partition
+		;;
+	dd_to_drive)
+		dd_to_drive
+		;;
+	esac
+	calculate_rootfs_partition
+	format_boot_partition
+	format_rootfs_partition
 }
 
 function populate_boot {
@@ -685,25 +692,19 @@ function populate_boot {
 	if mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
 		mkdir -p ${TEMPDIR}/disk/backup
 
-		if [ "${SPL_BOOT}" ] ; then
+		if [ "${spl_name}" ] ; then
 			if [ -f ${TEMPDIR}/dl/${MLO} ]; then
-				cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/MLO
-				cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/backup/MLO
+				cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/${spl_name}
+				cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/backup/${spl_name}
 				echo "-----------------------------"
 			fi
 		fi
 
-		if [ ! "${DD_UBOOT}" ] ; then
+		if [ "${boot_name}" ] ; then
 			if [ -f ${TEMPDIR}/dl/${UBOOT} ]; then
-				if echo ${UBOOT} | grep img > /dev/null 2>&1;then
-					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.img
-					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/backup/u-boot.img
-					echo "-----------------------------"
-				else
-					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/u-boot.bin
-					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/backup/u-boot.bin
-					echo "-----------------------------"
-				fi
+				cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/${boot_name}
+				cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/backup/${boot_name}
+				echo "-----------------------------"
 			fi
 		fi
 
@@ -1006,7 +1007,12 @@ function check_mmc {
 
 function is_omap {
 	IS_OMAP=1
-	SPL_BOOT=1
+
+	bootloader_location="omap_fatfs_boot_part"
+	SPL="SPL"
+	spl_name="MLO"
+	boot_name="u-boot.img"
+
 	SUBARCH="omap"
 
 	kernel_addr="0x80300000"
@@ -1035,6 +1041,11 @@ function is_omap {
 
 function is_imx {
 	IS_IMX=1
+
+	bootloader_location="dd_to_drive"
+	SPL="BOOT"
+	spl_name="ignore"
+
 	SERIAL_CONSOLE="${SERIAL},115200"
 	SUBARCH="imx"
 
@@ -1045,17 +1056,18 @@ function is_imx {
 }
 
 function check_uboot_type {
-	unset SPL_BOOT
-	unset DO_UBOOT
 	unset IN_VALID_UBOOT
 	unset SMSC95XX_MOREMEM
 	unset USE_ZIMAGE
 	unset dtb_file
 
+	unset bootloader_location
+	unset spl_name
+	unset boot_name
+
 	case "${UBOOT_TYPE}" in
 	beagle_bx)
 		SYSTEM="beagle_bx"
-		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_BX"
 		SERIAL="ttyO2"
 		is_omap
@@ -1064,7 +1076,6 @@ function check_uboot_type {
 		;;
 	beagle_cx)
 		SYSTEM="beagle_cx"
-		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_CX"
 		SERIAL="ttyO2"
 		is_omap
@@ -1073,7 +1084,6 @@ function check_uboot_type {
 		;;
 	beagle_xm)
 		SYSTEM="beagle_xm"
-		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_XM"
 		SERIAL="ttyO2"
 		is_omap
@@ -1082,7 +1092,6 @@ function check_uboot_type {
 		;;
 	beagle_xm_kms)
 		SYSTEM="beagle_xm"
-		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBOARD_XM"
 		SERIAL="ttyO2"
 		is_omap
@@ -1096,7 +1105,6 @@ function check_uboot_type {
 		;;
 	bone)
 		SYSTEM="bone"
-		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBONE_A"
 		SERIAL="ttyO0"
 		is_omap
@@ -1110,7 +1118,6 @@ function check_uboot_type {
 		;;
 	bone_zimage)
 		SYSTEM="bone_zimage"
-		DO_UBOOT=1
 		BOOTLOADER="BEAGLEBONE_A"
 		SERIAL="ttyO0"
 		is_omap
@@ -1127,7 +1134,6 @@ function check_uboot_type {
 		;;
 	igepv2)
 		SYSTEM="igepv2"
-		DO_UBOOT=1
 		BOOTLOADER="IGEP00X0"
 		SERIAL="ttyO2"
 		is_omap
@@ -1137,7 +1143,6 @@ function check_uboot_type {
 		;;
 	panda)
 		SYSTEM="panda"
-		DO_UBOOT=1
 		BOOTLOADER="PANDABOARD"
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
@@ -1149,7 +1154,6 @@ function check_uboot_type {
 		;;
 	panda_es)
 		SYSTEM="panda_es"
-		DO_UBOOT=1
 		BOOTLOADER="PANDABOARD_ES"
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
@@ -1161,7 +1165,6 @@ function check_uboot_type {
 		;;
 	panda_kms)
 		SYSTEM="panda_es"
-		DO_UBOOT=1
 		BOOTLOADER="PANDABOARD_ES"
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
@@ -1177,7 +1180,6 @@ function check_uboot_type {
 		;;
 	crane)
 		SYSTEM="crane"
-		DO_UBOOT=1
 		BOOTLOADER="CRANEBOARD"
 		SERIAL="ttyO2"
 		is_omap
@@ -1188,8 +1190,6 @@ function check_uboot_type {
 		;;
 	mx51evk)
 		SYSTEM="mx51evk"
-		DO_UBOOT=1
-		DD_UBOOT=1
 		BOOTLOADER="MX51EVK"
 		SERIAL="ttymxc0"
 		is_imx
@@ -1202,8 +1202,6 @@ function check_uboot_type {
 		;;
 	mx53loco)
 		SYSTEM="mx53loco"
-		DO_UBOOT=1
-		DD_UBOOT=1
 		BOOTLOADER="MX53LOCO"
 		SERIAL="ttymxc0"
 		is_imx
@@ -1462,9 +1460,7 @@ fi
  dl_kernel_image
  dl_root_image
 
-if [ "$DO_UBOOT" ];then
  setup_bootscripts
-fi
 
  extract_zimage
  unmount_all_drive_partitions
