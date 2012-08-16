@@ -708,7 +708,7 @@ function populate_boot {
 		VMLINUZ="vmlinuz-*"
 		if [ -f ${TEMPDIR}/kernel/boot/${VMLINUZ} ] ; then
 			LINUX_VER=$(ls ${TEMPDIR}/kernel/boot/${VMLINUZ} | awk -F'vmlinuz-' '{print $2}')
-			if [ ! "${USE_ZIMAGE}" ] ; then
+			if [ "${USE_UIMAGE}" ] ; then
 				echo "Using mkimage to create uImage"
 				mkimage -A arm -O linux -T kernel -C none -a ${load_addr} -e ${load_addr} -n ${LINUX_VER} -d ${TEMPDIR}/kernel/boot/${VMLINUZ} ${TEMPDIR}/disk/uImage
 				echo "-----------------------------"
@@ -726,10 +726,13 @@ function populate_boot {
 		cat  ${TEMPDIR}/bootscripts/normal.cmd
 		echo "-----------------------------"
 
+		#This should be compatible with hwpacks variable names..
+		#https://code.launchpad.net/~linaro-maintainers/linaro-images/
 		cat > ${TEMPDIR}/disk/SOC.sh <<-__EOF__
 			#!/bin/sh
 			format=1.0
 			board=${BOOTLOADER}
+			boot_image=${boot}
 			kernel_addr=${kernel_addr}
 			initrd_addr=${initrd_addr}
 			load_addr=${load_addr}
@@ -934,6 +937,7 @@ function is_omap {
 	initrd_addr="0x81600000"
 	load_addr="0x80008000"
 	dtb_addr="0x815f0000"
+	startup_script="uEnv.txt"
 
 	SERIAL_CONSOLE="${SERIAL},115200n8"
 
@@ -964,6 +968,8 @@ function is_imx {
 	SERIAL_CONSOLE="${SERIAL},115200"
 	SUBARCH="imx"
 
+	startup_script="uEnv.txt"
+
 	VIDEO_CONSOLE="console=tty0"
 	HAS_IMX_BLOB=1
 	VIDEO_FB="mxcdi1fb"
@@ -973,12 +979,14 @@ function is_imx {
 function check_uboot_type {
 	unset IN_VALID_UBOOT
 	unset SMSC95XX_MOREMEM
-	unset USE_ZIMAGE
+	unset USE_UIMAGE
 	unset dtb_file
 
 	unset bootloader_location
 	unset spl_name
 	unset boot_name
+	kernel_file=zImage
+	initrd_file=initrd.img
 	boot="bootz"
 
 	case "${UBOOT_TYPE}" in
@@ -987,7 +995,6 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBOARD_BX"
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap3-beagle.dtb"
 		;;
 	beagle_cx)
@@ -995,7 +1002,6 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBOARD_CX"
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap3-beagle.dtb"
 		;;
 	beagle_xm)
@@ -1003,7 +1009,6 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBOARD_XM"
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap3-beagle.dtb"
 		;;
 	beagle_xm_kms)
@@ -1011,7 +1016,6 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBOARD_XM"
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap3-beagle.dtb"
 
 		USE_KMS=1
@@ -1025,6 +1029,7 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBONE_A"
 		SERIAL="ttyO0"
 		is_omap
+		USE_UIMAGE=1
 
 		SUBARCH="omap-psp"
 
@@ -1038,7 +1043,6 @@ function check_uboot_type {
 		BOOTLOADER="BEAGLEBONE_A"
 		SERIAL="ttyO0"
 		is_omap
-		USE_ZIMAGE=1
 
 		USE_BETA_BOOTLOADER=1
 
@@ -1054,7 +1058,6 @@ function check_uboot_type {
 		BOOTLOADER="IGEP00X0"
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 
 		SERIAL_MODE=1
 		;;
@@ -1064,7 +1067,6 @@ function check_uboot_type {
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap4-panda.dtb"
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
@@ -1075,7 +1077,6 @@ function check_uboot_type {
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap4-panda.dtb"
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
@@ -1086,7 +1087,6 @@ function check_uboot_type {
 		SMSC95XX_MOREMEM=1
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 		#dtb_file="omap4-panda.dtb"
 
 		USE_KMS=1
@@ -1100,7 +1100,6 @@ function check_uboot_type {
 		BOOTLOADER="CRANEBOARD"
 		SERIAL="ttyO2"
 		is_omap
-		USE_ZIMAGE=1
 
 		BETA_KERNEL=1
 		SERIAL_MODE=1
@@ -1110,9 +1109,8 @@ function check_uboot_type {
 		BOOTLOADER="MX51EVK"
 		SERIAL="ttymxc0"
 		is_imx
-		USE_ZIMAGE=1
-		kernel_addr="0x90800000"
-		initrd_addr="0x92100000"
+		kernel_addr="0x90010000"
+		initrd_addr="0x92000000"
 		load_addr="0x90008000"
 		BETA_KERNEL=1
 		SERIAL_MODE=1
@@ -1122,9 +1120,8 @@ function check_uboot_type {
 		BOOTLOADER="MX53LOCO"
 		SERIAL="ttymxc0"
 		is_imx
-		USE_ZIMAGE=1
-		kernel_addr="0x70800000"
-		initrd_addr="0x72100000"
+		kernel_addr="0x70010000"
+		initrd_addr="0x72000000"
 		load_addr="0x70008000"
 		dtb_addr="0x71ff0000"
 		#dtb_file="imx53-qsb.dtb"
@@ -1138,14 +1135,14 @@ function check_uboot_type {
 			ERROR: This script does not currently recognize the selected: [--uboot ${UBOOT_TYPE}] option..
 			Please rerun $(basename $0) with a valid [--uboot <device>] option from the list below:
 			-----------------------------
-			-Supported TI Devices:-------
-			beagle_bx - <BeagleBoard Ax/Bx>
-			beagle_cx - <BeagleBoard Cx>
-			beagle_xm - <BeagleBoard xMA/B/C>
-			bone - <BeagleBone Ax>
-			igepv2 - <serial mode only>
-			panda - <PandaBoard Ax>
-			panda_es - <PandaBoard ES>
+			        TI:
+			                beagle_bx - <BeagleBoard Ax/Bx>
+			                beagle_cx - <BeagleBoard Cx>
+			                beagle_xm - <BeagleBoard xMA/B/C>
+			                bone - <BeagleBone Ax>
+			                igepv2 - <serial mode only>
+			                panda - <PandaBoard Ax>
+			                panda_es - <PandaBoard ES>
 			-Supported Freescale Devices:
 			mx51evk - <mx51 Dev Board>
 			mx53loco - <Quick Start Board>
@@ -1154,6 +1151,21 @@ function check_uboot_type {
 		exit
 		;;
 	esac
+
+	if [ "${USE_UIMAGE}" ] ; then
+		unset NEEDS_COMMAND
+		check_for_command mkimage uboot-mkimage
+
+		if [ "${NEEDS_COMMAND}" ] ; then
+			echo ""
+			echo "Your system is missing the mkimage dependency needed for this particular target."
+			echo "Ubuntu/Debian: sudo apt-get install uboot-mkimage"
+			echo "Fedora: as root: yum install uboot-tools"
+			echo "Gentoo: emerge u-boot-tools"
+			echo ""
+			exit
+		fi
+	fi
 }
 
 function check_distro {
@@ -1193,24 +1205,24 @@ function check_distro {
 
 function usage {
     echo "usage: sudo $(basename $0) --mmc /dev/sdX --uboot <dev board>"
-cat <<EOF
+	#tabed to match 
+		cat <<-__EOF__
+			Script Version git: ${GIT_VERSION}
+			-----------------------------
+			Bugs email: "bugs at rcn-ee.com"
 
-Script Version git: ${GIT_VERSION}
------------------------------
-Bugs email: "bugs at rcn-ee.com"
+			Required Options:
+			--mmc </dev/sdX>
 
-Required Options:
---mmc </dev/sdX>
-
---uboot <dev board>
-    (omap)
-    beagle_bx - <BeagleBoard Ax/Bx>
-    beagle_cx - <BeagleBoard Cx>
-    beagle_xm - <BeagleBoard xMA/B/C>
-    bone - <BeagleBone Ax>
-    igepv2 - <serial mode only>
-    panda - <PandaBoard Ax>
-    panda_es - <PandaBoard ES>
+			--uboot <dev board>
+			        TI:
+			                beagle_bx - <BeagleBoard Ax/Bx>
+			                beagle_cx - <BeagleBoard Cx>
+			                beagle_xm - <BeagleBoard xMA/B/C>
+			                bone - <BeagleBone Ax>
+			                igepv2 - <serial mode only>
+			                panda - <PandaBoard Ax>
+			                panda_es - <PandaBoard ES>
 
     (freescale)
 	mx51evk
@@ -1221,15 +1233,15 @@ Optional:
     Fedora:
       f14 <default>
 
---addon <additional peripheral device>
-    pico
-    ulcd <beagle xm>
+			--addon <additional peripheral device>
+			        pico
+			        ulcd <beagle xm>
 
---rootfs <fs_type>
-    ext2
-    ext3
-    ext4 - <set as default>
-    btrfs
+			--rootfs <fs_type>
+			        ext2
+			        ext3
+			        ext4 - <set as default>
+			        btrfs
 
 --firmware
     Add distro firmware
@@ -1237,23 +1249,20 @@ Optional:
 --serial-mode
     <DVI Mode is default, this overrides it for Serial Mode>
 
---svideo-ntsc
-    force ntsc mode for svideo
+			--svideo-ntsc
+			        <force ntsc mode for S-Video>
 
---svideo-pal
-    force pal mode for svideo
+			--svideo-pal
+			        <force pal mode for S-Video>
 
-Additional Options:
--h --help
-    this help
+			Additional Options:
+			        -h --help
 
---probe-mmc
-    List all partitions: sudo ./mk_mmc.sh --probe-mmc
+			--probe-mmc
+			        <list all partitions: sudo ./setup_sdcard.sh --probe-mmc>
 
-Debug:
-
-EOF
-exit
+			__EOF__
+	exit
 }
 
 function checkparm {
