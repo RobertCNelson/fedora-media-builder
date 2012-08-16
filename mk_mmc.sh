@@ -741,113 +741,32 @@ function populate_boot {
 		echo "Debug:"
 		cat ${TEMPDIR}/disk/SOC.sh
 
-cat > ${TEMPDIR}/readme.txt <<script_readme
+		echo "Debug: Adding Useful scripts from: https://github.com/RobertCNelson/tools"
+		echo "-----------------------------"
+		mkdir -p ${TEMPDIR}/disk/tools
+		git clone git://github.com/RobertCNelson/tools.git ${TEMPDIR}/disk/tools
+		echo "-----------------------------"
 
-These can be run from anywhere, but just in case change to "cd /boot/uboot"
+		cd ${TEMPDIR}/disk
+		sync
+		cd "${DIR}"/
 
-Tools:
+		echo "Debug: Contents of Boot Partition"
+		echo "-----------------------------"
+		ls -lh ${TEMPDIR}/disk/
+		echo "-----------------------------"
 
- "./tools/update_boot_files.sh"
+		umount ${TEMPDIR}/disk || true
 
-Updated with a custom uImage and modules or modified the boot.cmd/user.com files with new boot args? Run "./tools/update_boot_files.sh" to regenerate all boot files...
-
-script_readme
-
-	cat > ${TEMPDIR}/update_boot_files.sh <<-__EOF__
-		#!/bin/sh
-
-		if ! id | grep -q root; then
-		        echo "must be run as root"
-		        exit
-		fi
-
-		cd /boot/uboot
-		mount -o remount,rw /boot/uboot
-
-		if [ ! -f /boot/initrd.img-\$(uname -r) ] ; then
-		        update-initramfs -c -k \$(uname -r)
-		else
-		        update-initramfs -u -k \$(uname -r)
-		fi
-
-		if [ -f /boot/initrd.img-\$(uname -r) ] ; then
-		        cp -v /boot/initrd.img-\$(uname -r) /boot/uboot/initrd.img
-		fi
-
-		#legacy uImage support:
-		if [ -f /boot/uboot/uImage ] ; then
-		        if [ -f /boot/initrd.img-\$(uname -r) ] ; then
-		                mkimage -A arm -O linux -T ramdisk -C none -a 0 -e 0 -n initramfs -d /boot/initrd.img-\$(uname -r) /boot/uboot/uInitrd
-		        fi
-		        if [ -f /boot/uboot/boot.cmd ] ; then
-		                mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d /boot/uboot/boot.cmd /boot/uboot/boot.scr
-		                cp -v /boot/uboot/boot.scr /boot/uboot/boot.ini
-		        fi
-		        if [ -f /boot/uboot/serial.cmd ] ; then
-		                mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Boot Script" -d /boot/uboot/serial.cmd /boot/uboot/boot.scr
-		        fi
-		        if [ -f /boot/uboot/user.cmd ] ; then
-		                mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Reset Nand" -d /boot/uboot/user.cmd /boot/uboot/user.scr
-		        fi
-		fi
-
-	__EOF__
-
-
-	cat > ${TEMPDIR}/suspend_mount_debug.sh <<-__EOF__
-		#!/bin/bash
-
-		if ! id | grep -q root; then
-		        echo "must be run as root"
-		        exit
-		fi
-
-		mkdir -p /debug
-		mount -t debugfs debugfs /debug
-
-	__EOF__
-
-	cat > ${TEMPDIR}/suspend.sh <<-__EOF__
-		#!/bin/bash
-
-		if ! id | grep -q root; then
-		        echo "must be run as root"
-		        exit
-		fi
-
-		echo mem > /sys/power/state
-
-	__EOF__
-
-	mkdir -p ${TEMPDIR}/disk/tools
-	cp -v ${TEMPDIR}/readme.txt ${TEMPDIR}/disk/tools/readme.txt
-
-	cp -v ${TEMPDIR}/suspend_mount_debug.sh ${TEMPDIR}/disk/tools/
-	chmod +x ${TEMPDIR}/disk/tools/suspend_mount_debug.sh
-
-	cp -v ${TEMPDIR}/suspend.sh ${TEMPDIR}/disk/tools/
-	chmod +x ${TEMPDIR}/disk/tools/suspend.sh
-
-cd ${TEMPDIR}/disk
-sync
-cd "${DIR}/"
-
- echo "Debug: Contents of Boot Partition"
- echo "-----------------------------"
- ls -lh ${TEMPDIR}/disk/
- echo "-----------------------------"
-
-umount ${TEMPDIR}/disk || true
-
- echo "Finished populating Boot Partition"
- echo "-----------------------------"
-else
- echo "-----------------------------"
- echo "Unable to mount ${MMC}${PARTITION_PREFIX}1 at ${TEMPDIR}/disk to complete populating Boot Partition"
- echo "Please retry running the script, sometimes rebooting your system helps."
- echo "-----------------------------"
- exit
-fi
+		echo "Finished populating Boot Partition"
+		echo "-----------------------------"
+	else
+		echo "-----------------------------"
+		echo "Unable to mount ${MMC}${PARTITION_PREFIX}1 at ${TEMPDIR}/disk to complete populating Boot Partition"
+		echo "Please retry running the script, sometimes rebooting your system helps."
+		echo "-----------------------------"
+		exit
+	fi
 }
 
 function populate_rootfs {
