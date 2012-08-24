@@ -121,7 +121,7 @@ function is_valid_addon {
 }
 
 function check_root {
-	if [[ $UID -ne 0 ]]; then
+	if [[ ${UID} -ne 0 ]] ; then
 		echo "$0 must be run as sudo user or root"
 		exit
 	fi
@@ -612,7 +612,7 @@ function omap_fatfs_boot_part {
 	echo "-----------------------------"
 	parted --script ${MMC} set 1 boot on
 
-	if [ "$FDISK_DEBUG" ];then
+	if [ "${FDISK_DEBUG}" ] ; then
 		echo "Debug: Partition 1 layout:"
 		echo "-----------------------------"
 		fdisk -l ${MMC}
@@ -732,12 +732,22 @@ function populate_boot {
 			#!/bin/sh
 			format=1.0
 			board=${BOOTLOADER}
+			bootloader_location=${bootloader_location}
+			dd_seek=${dd_seek}
+			dd_bs=${dd_bs}
+
 			boot_image=${boot}
+			boot_script=${boot_script}
+			boot_fstype=${boot_fstype}
+
+			serial_tty=${SERIAL}
 			kernel_addr=${kernel_addr}
 			initrd_addr=${initrd_addr}
 			load_addr=${load_addr}
 			dtb_addr=${dtb_addr}
 			dtb_file=${dtb_file}
+
+			smsc95xx_mem=${smsc95xx_mem}
 
 		__EOF__
 
@@ -1170,7 +1180,6 @@ function check_uboot_type {
 
 function check_distro {
 	unset IN_VALID_DISTRO
-
 	case "${DISTRO_TYPE}" in
 	f14-armel|f14-sfp|f14)
 		DIST=f14
@@ -1204,7 +1213,7 @@ function check_distro {
 }
 
 function usage {
-    echo "usage: sudo $(basename $0) --mmc /dev/sdX --uboot <dev board>"
+	echo "usage: sudo $(basename $0) --mmc /dev/sdX --uboot <dev board>"
 	#tabed to match 
 		cat <<-__EOF__
 			Script Version git: ${GIT_VERSION}
@@ -1266,82 +1275,81 @@ Optional:
 }
 
 function checkparm {
-    if [ "$(echo $1|grep ^'\-')" ];then
-        echo "E: Need an argument"
-        usage
-    fi
+	if [ "$(echo $1|grep ^'\-')" ] ; then
+		echo "E: Need an argument"
+		usage
+	fi
 }
 
 IN_VALID_UBOOT=1
 
 # parse commandline options
-while [ ! -z "$1" ]; do
-    case $1 in
-        -h|--help)
-            usage
-            MMC=1
-            ;;
-        --probe-mmc)
-            MMC="/dev/idontknow"
-            check_root
-            check_mmc
-            ;;
-        --mmc)
-            checkparm $2
-            MMC="$2"
-	    if [[ "${MMC}" =~ "mmcblk" ]]
-            then
-	        PARTITION_PREFIX="p"
-            fi
-            check_root
-            check_mmc
-            ;;
-        --uboot)
-            checkparm $2
-            UBOOT_TYPE="$2"
-            check_uboot_type
-            ;;
-        --distro)
-            checkparm $2
-            DISTRO_TYPE="$2"
-            check_distro
-            ;;
-        --firmware)
-            FIRMWARE=1
-            ;;
-        --serial-mode)
-            SERIAL_MODE=1
-            ;;
-        --addon)
-            checkparm $2
-            ADDON=$2
-            ;;
-        --rootfs)
-            checkparm $2
-            ROOTFS_TYPE="$2"
-            ;;
-        --svideo-ntsc)
-            SVIDEO_NTSC=1
-            ;;
-        --svideo-pal)
-            SVIDEO_PAL=1
-            ;;
-        --deb-file)
-            checkparm $2
-            DEB_FILE="$2"
-            KERNEL_DEB=1
-            ;;
-        --use-beta-kernel)
-            BETA_KERNEL=1
-            ;;
-        --use-experimental-kernel)
-            EXPERIMENTAL_KERNEL=1
-            ;;
-        --use-beta-bootloader)
-            USE_BETA_BOOTLOADER=1
-            ;;
-    esac
-    shift
+while [ ! -z "$1" ] ; do
+	case $1 in
+	-h|--help)
+		usage
+		MMC=1
+		;;
+	--probe-mmc)
+		MMC="/dev/idontknow"
+		check_root
+		check_mmc
+		;;
+	--mmc)
+		checkparm $2
+		MMC="$2"
+		if [[ "${MMC}" =~ "mmcblk" ]] ; then
+			PARTITION_PREFIX="p"
+		fi
+		check_root
+		check_mmc
+		;;
+	--uboot)
+		checkparm $2
+		UBOOT_TYPE="$2"
+		check_uboot_type
+		;;
+	--distro)
+		checkparm $2
+		DISTRO_TYPE="$2"
+		check_distro
+		;;
+	--firmware)
+		FIRMWARE=1
+		;;
+	--serial-mode)
+		SERIAL_MODE=1
+		;;
+	--addon)
+		checkparm $2
+		ADDON=$2
+		;;
+	--rootfs)
+		checkparm $2
+		ROOTFS_TYPE="$2"
+		;;
+	--svideo-ntsc)
+		SVIDEO_NTSC=1
+		;;
+	--svideo-pal)
+		SVIDEO_PAL=1
+		;;
+	--deb-file)
+		checkparm $2
+		DEB_FILE="$2"
+		KERNEL_DEB=1
+		;;
+	--use-beta-kernel)
+		BETA_KERNEL=1
+		;;
+	--use-experimental-kernel)
+		EXPERIMENTAL_KERNEL=1
+		;;
+	--use-beta-bootloader)
+		USE_BETA_BOOTLOADER=1
+		;;
+	esac
+	shift
 done
 
 if [ ! "${MMC}" ] ; then
@@ -1349,7 +1357,7 @@ if [ ! "${MMC}" ] ; then
 	usage
 fi
 
-if [ "$IN_VALID_UBOOT" ] ; then
+if [ "${IN_VALID_UBOOT}" ] ; then
 	echo "ERROR: --uboot undefined"
 	usage
 fi
@@ -1376,21 +1384,20 @@ if [ -n "${ADDON}" ] ; then
 	fi
 fi
 
- echo ""
- echo "Script Version git: ${GIT_VERSION}"
- echo "-----------------------------"
+echo ""
+echo "Script Version git: ${GIT_VERSION}"
+echo "-----------------------------"
 
- check_root
- detect_software
- dl_bootloader
- dl_kernel_image
- dl_root_image
+check_root
+detect_software
+dl_bootloader
+dl_kernel_image
+dl_root_image
 
- setup_bootscripts
+setup_bootscripts
 
- extract_zimage
- unmount_all_drive_partitions
- create_partitions
- populate_boot
- populate_rootfs
-
+extract_zimage
+unmount_all_drive_partitions
+create_partitions
+populate_boot
+populate_rootfs
