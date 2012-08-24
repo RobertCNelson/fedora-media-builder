@@ -34,6 +34,8 @@ PARTITION_PREFIX=""
 
 unset MMC
 unset USE_BETA_BOOTLOADER
+unset USE_LOCAL_BOOT
+unset LOCAL_BOOTLOADER
 unset ADDON
 
 #Common KMS:
@@ -178,6 +180,25 @@ function rcn-ee_down_use_mirror {
 	echo "-----------------------------"
 	MIRROR=${BACKUP_MIRROR}
 	RCNEEDOWN=1
+}
+
+function local_bootloader {
+	echo ""
+	echo "Using Locally Stored Device Bootloader"
+	echo "-----------------------------"
+	mkdir -p ${TEMPDIR}/dl/
+
+	if [ "${spl_name}" ] ; then
+		cp ${LOCAL_SPL} ${TEMPDIR}/dl/
+		MLO=${LOCAL_SPL##*/}
+		echo "SPL Bootloader: ${MLO}"
+	fi
+
+	if [ "${boot_name}" ] ; then
+		cp ${LOCAL_BOOTLOADER} ${TEMPDIR}/dl/
+		UBOOT=${LOCAL_BOOTLOADER##*/}
+		echo "UBOOT Bootloader: ${UBOOT}"
+	fi
 }
 
 function dl_bootloader {
@@ -736,6 +757,7 @@ function populate_boot {
 
 	if mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
 		mkdir -p ${TEMPDIR}/disk/backup
+		mkdir -p ${TEMPDIR}/disk/dtbs
 
 		if [ ! "${bootloader_installed}" ] ; then
 			if [ "${spl_name}" ] ; then
@@ -746,9 +768,14 @@ function populate_boot {
 				fi
 			fi
 
-			if [ "${boot_name}" ] ; then
-				if [ -f ${TEMPDIR}/dl/${UBOOT} ]; then
+			if [ "${boot_name}" ] && [ ! "${IS_IMX}" ] ; then
+				if [ -f ${TEMPDIR}/dl/${UBOOT} ] ; then
 					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/${boot_name}
+				fi
+			fi
+
+			if [ "${boot_name}" ] ; then
+				if [ -f ${TEMPDIR}/dl/${UBOOT} ] ; then
 					cp -v ${TEMPDIR}/dl/${UBOOT} ${TEMPDIR}/disk/backup/${boot_name}
 					echo "-----------------------------"
 				fi
@@ -997,7 +1024,7 @@ function is_omap {
 	initrd_addr="0x81600000"
 	load_addr="0x80008000"
 	dtb_addr="0x815f0000"
-	startup_script="uEnv.txt"
+	boot_script="uEnv.txt"
 
 	SERIAL_CONSOLE="${SERIAL},115200n8"
 
@@ -1023,12 +1050,15 @@ function is_imx {
 
 	bootloader_location="dd_to_drive"
 	unset spl_name
-	boot_name=1
+	boot_name="u-boot.imx"
+	dd_seek="1"
+	dd_bs="1024"
+	boot_startmb="2"
 
 	SERIAL_CONSOLE="${SERIAL},115200"
 	SUBARCH="imx"
 
-	startup_script="uEnv.txt"
+	boot_script="uEnv.txt"
 
 	VIDEO_CONSOLE="console=tty0"
 	HAS_IMX_BLOB=1
@@ -1393,6 +1423,16 @@ while [ ! -z "$1" ] ; do
 	--use-experimental-kernel)
 		EXPERIMENTAL_KERNEL=1
 		;;
+	--spl)
+		checkparm $2
+		LOCAL_SPL="$2"
+		USE_LOCAL_BOOT=1
+		;;
+	--bootloader)
+		checkparm $2
+		LOCAL_BOOTLOADER="$2"
+		USE_LOCAL_BOOT=1
+		;;
 	--use-beta-bootloader)
 		USE_BETA_BOOTLOADER=1
 		;;
@@ -1437,7 +1477,15 @@ echo "-----------------------------"
 
 check_root
 detect_software
-dl_bootloader
+
+if [ "${spl_name}" ] || [ "${boot_name}" ] ; then
+	if [ "${USE_LOCAL_BOOT}" ] ; then
+		local_bootloader
+	else
+		dl_bootloader
+	fi
+fi
+
 dl_kernel_image
 dl_root_image
 
