@@ -1472,6 +1472,19 @@ fi
 
 unset BTRFS_FSTAB
 if [ "x${ROOTFS_TYPE}" == "xbtrfs" ] ; then
+	unset NEEDS_COMMAND
+	check_for_command mkfs.btrfs btrfs-tools
+
+	if [ "${NEEDS_COMMAND}" ] ; then
+		echo ""
+		echo "Your system is missing the btrfs dependency needed for this particular target."
+		echo "Ubuntu/Debian: sudo apt-get install btrfs-tools"
+		echo "Fedora: as root: yum install btrfs-progs"
+		echo "Gentoo: emerge btrfs-progs"
+		echo ""
+		exit
+	fi
+
 	BTRFS_FSTAB=1
 fi
 
