@@ -695,14 +695,38 @@ function dd_to_drive {
 	echo ""
 	echo "Using dd to place bootloader on drive"
 	echo "-----------------------------"
-	dd if=${TEMPDIR}/dl/${UBOOT} of=${MMC} seek=1 bs=1024
+	dd if=${TEMPDIR}/dl/${UBOOT} of=${MMC} seek=${dd_seek} bs=${dd_bs}
 	bootloader_installed=1
 
-	#For now, lets default to fat16, but this could be ext2/3/4
 	echo "Using parted to create BOOT Partition"
 	echo "-----------------------------"
-	parted --script ${PARTED_ALIGN} ${MMC} mkpart primary fat16 10 100
-	#parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ext3 10 100
+	if [ "x${boot_fstype}" == "xfat" ] ; then
+		parted --script ${PARTED_ALIGN} ${MMC} mkpart primary fat16 ${boot_startmb} ${boot_endmb}
+	else
+		parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ext2 ${boot_startmb} ${boot_endmb}
+	fi
+}
+
+function no_boot_on_drive {
+	echo "Using parted to create BOOT Partition"
+	echo "-----------------------------"
+	if [ "x${boot_fstype}" == "xfat" ] ; then
+		parted --script ${PARTED_ALIGN} ${MMC} mkpart primary fat16 ${boot_startmb} ${boot_endmb}
+	else
+		parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ext2 ${boot_startmb} ${boot_endmb}
+	fi
+}
+
+function format_boot_partition {
+	echo "Formating Boot Partition"
+	echo "-----------------------------"
+	if [ "x${boot_fstype}" == "xfat" ] ; then
+		boot_part_format="vfat"
+		mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
+	else
+		boot_part_format="ext2"
+		mkfs.ext2 ${MMC}${PARTITION_PREFIX}1 -L ${BOOT_LABEL}
+	fi
 }
 
 function calculate_rootfs_partition {
@@ -726,10 +750,10 @@ function calculate_rootfs_partition {
 	fi
 }
 
-function format_boot_partition {
-	echo "Formating Boot Partition"
+function format_rootfs_partition {
+	echo "Formating rootfs Partition as ${ROOTFS_TYPE}"
 	echo "-----------------------------"
-	mkfs.vfat -F 16 ${MMC}${PARTITION_PREFIX}1 -n ${BOOT_LABEL}
+	mkfs.${ROOTFS_TYPE} ${MMC}${PARTITION_PREFIX}2 -L ${ROOTFS_LABEL}
 }
 
 function create_partitions {
@@ -739,7 +763,12 @@ function create_partitions {
 		omap_fatfs_boot_part
 		;;
 	dd_to_drive)
+		let boot_endmb=${boot_startmb}+${boot_partition_size}
 		dd_to_drive
+		;;
+	*)
+		let boot_endmb=${boot_startmb}+${boot_partition_size}
+		no_boot_on_drive
 		;;
 	esac
 	calculate_rootfs_partition
@@ -755,7 +784,7 @@ function populate_boot {
 		mkdir -p ${TEMPDIR}/disk
 	fi
 
-	if mount -t vfat ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
+	if mount -t ${boot_part_format} ${MMC}${PARTITION_PREFIX}1 ${TEMPDIR}/disk; then
 		mkdir -p ${TEMPDIR}/disk/backup
 		mkdir -p ${TEMPDIR}/disk/dtbs
 
@@ -911,6 +940,10 @@ function populate_rootfs {
 			;;
 		esac
 
+		if [ "${smsc95xx_mem}" ] ; then
+			echo "vm.min_free_kbytes = ${smsc95xx_mem}" >> ${TEMPDIR}/disk/etc/sysctl.conf
+		fi
+
 		if [ "${BTRFS_FSTAB}" ] ; then
 			echo "btrfs selected as rootfs type, modifing /etc/fstab..."
 			sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
@@ -1026,6 +1059,9 @@ function is_omap {
 	dtb_addr="0x815f0000"
 	boot_script="uEnv.txt"
 
+	boot_fstype="fat"
+
+	SERIAL="ttyO2"
 	SERIAL_CONSOLE="${SERIAL},115200n8"
 
 	VIDEO_CONSOLE="console=tty0"
@@ -1059,6 +1095,8 @@ function is_imx {
 	SUBARCH="imx"
 
 	boot_script="uEnv.txt"
+
+	boot_fstype="ext2"
 
 	VIDEO_CONSOLE="console=tty0"
 	HAS_IMX_BLOB=1
