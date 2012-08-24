@@ -1091,8 +1091,10 @@ function is_imx {
 	dd_bs="1024"
 	boot_startmb="2"
 
-	SERIAL_CONSOLE="${SERIAL},115200"
 	SUBARCH="imx"
+
+	SERIAL="ttymxc0"
+	SERIAL_CONSOLE="${SERIAL},115200"
 
 	boot_script="uEnv.txt"
 
@@ -1106,44 +1108,45 @@ function is_imx {
 
 function check_uboot_type {
 	unset IN_VALID_UBOOT
-	unset SMSC95XX_MOREMEM
 	unset USE_UIMAGE
+	unset USE_KMS
 	unset dtb_file
 
 	unset bootloader_location
 	unset spl_name
 	unset boot_name
-	kernel_file=zImage
-	initrd_file=initrd.img
+	unset need_dtbs
 	boot="bootz"
+	unset boot_scr_wrapper
+	unset smsc95xx_mem
+	unset dd_seek
+	unset dd_bs
 
 	case "${UBOOT_TYPE}" in
 	beagle_bx)
 		SYSTEM="beagle_bx"
 		BOOTLOADER="BEAGLEBOARD_BX"
-		SERIAL="ttyO2"
 		is_omap
 		#dtb_file="omap3-beagle.dtb"
 		;;
 	beagle_cx)
 		SYSTEM="beagle_cx"
 		BOOTLOADER="BEAGLEBOARD_CX"
-		SERIAL="ttyO2"
 		is_omap
 		#dtb_file="omap3-beagle.dtb"
 		;;
 	beagle_xm)
 		SYSTEM="beagle_xm"
 		BOOTLOADER="BEAGLEBOARD_XM"
-		SERIAL="ttyO2"
 		is_omap
+		smsc95xx_mem="16384"
 		#dtb_file="omap3-beagle.dtb"
 		;;
 	beagle_xm_kms)
 		SYSTEM="beagle_xm"
 		BOOTLOADER="BEAGLEBOARD_XM"
-		SERIAL="ttyO2"
 		is_omap
+		smsc95xx_mem="16384"
 		#dtb_file="omap3-beagle.dtb"
 
 		USE_KMS=1
@@ -1155,8 +1158,10 @@ function check_uboot_type {
 		boot="bootm"
 		SYSTEM="bone"
 		BOOTLOADER="BEAGLEBONE_A"
-		SERIAL="ttyO0"
 		is_omap
+		SERIAL="ttyO0"
+		SERIAL_CONSOLE="${SERIAL},115200n8"
+
 		USE_UIMAGE=1
 
 		SUBARCH="omap-psp"
@@ -1169,8 +1174,9 @@ function check_uboot_type {
 	bone_zimage)
 		SYSTEM="bone_zimage"
 		BOOTLOADER="BEAGLEBONE_A"
-		SERIAL="ttyO0"
 		is_omap
+		SERIAL="ttyO0"
+		SERIAL_CONSOLE="${SERIAL},115200n8"
 
 		USE_BETA_BOOTLOADER=1
 
@@ -1184,7 +1190,6 @@ function check_uboot_type {
 	igepv2)
 		SYSTEM="igepv2"
 		BOOTLOADER="IGEP00X0"
-		SERIAL="ttyO2"
 		is_omap
 
 		SERIAL_MODE=1
@@ -1192,55 +1197,48 @@ function check_uboot_type {
 	panda)
 		SYSTEM="panda"
 		BOOTLOADER="PANDABOARD"
-		SMSC95XX_MOREMEM=1
-		SERIAL="ttyO2"
 		is_omap
 		#dtb_file="omap4-panda.dtb"
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
+		smsc95xx_mem="16384"
 		;;
 	panda_es)
 		SYSTEM="panda_es"
 		BOOTLOADER="PANDABOARD_ES"
-		SMSC95XX_MOREMEM=1
-		SERIAL="ttyO2"
 		is_omap
 		#dtb_file="omap4-panda.dtb"
 		VIDEO_OMAP_RAM="16MB"
 		KMS_VIDEOB="video=HDMI-A-1"
+		smsc95xx_mem="32768"
 		;;
 	panda_kms)
 		SYSTEM="panda_es"
 		BOOTLOADER="PANDABOARD_ES"
-		SMSC95XX_MOREMEM=1
-		SERIAL="ttyO2"
 		is_omap
 		#dtb_file="omap4-panda.dtb"
 
 		USE_KMS=1
 		unset HAS_OMAPFB_DSS2
 		KMS_VIDEOB="video=HDMI-A-1"
-
+		smsc95xx_mem="32768"
 		BETA_KERNEL=1
 		;;
 	crane)
 		SYSTEM="crane"
 		BOOTLOADER="CRANEBOARD"
-		SERIAL="ttyO2"
 		is_omap
-
-		BETA_KERNEL=1
 		SERIAL_MODE=1
 		;;
 	mx51evk)
 		SYSTEM="mx51evk"
 		BOOTLOADER="MX51EVK"
-		SERIAL="ttymxc0"
 		is_imx
 		kernel_addr="0x90010000"
 		initrd_addr="0x92000000"
 		load_addr="0x90008000"
-		BETA_KERNEL=1
+		dtb_addr="0x91ff0000"
+		dtb_file="imx51-babbage.dtb"
 		SERIAL_MODE=1
 		;;
 	mx53loco)
@@ -1252,7 +1250,7 @@ function check_uboot_type {
 		initrd_addr="0x72000000"
 		load_addr="0x70008000"
 		dtb_addr="0x71ff0000"
-		#dtb_file="imx53-qsb.dtb"
+		dtb_file="imx53-qsb.dtb"
 		BETA_KERNEL=1
 		SERIAL_MODE=1
 		;;
