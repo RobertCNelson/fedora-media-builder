@@ -685,24 +685,24 @@ function dd_to_drive {
 }
 
 function calculate_rootfs_partition {
- echo "Creating rootfs ${ROOTFS_TYPE} Partition"
- echo "-----------------------------"
+	echo "Creating rootfs ${ROOTFS_TYPE} Partition"
+	echo "-----------------------------"
 
- unset END_BOOT
- END_BOOT=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep primary | awk '{print $3}' | cut -d "M" -f1)
+	unset END_BOOT
+	END_BOOT=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep primary | awk '{print $3}' | cut -d "M" -f1)
 
- unset END_DEVICE
- END_DEVICE=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep Free | tail -n 1 | awk '{print $2}' | cut -d "M" -f1)
+	unset END_DEVICE
+	END_DEVICE=$(LC_ALL=C parted -s ${MMC} unit mb print free | grep Free | tail -n 1 | awk '{print $2}' | cut -d "M" -f1)
 
- parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}
- sync
+	parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}
+	sync
 
- if [ "$FDISK_DEBUG" ];then
-  echo "Debug: ${ROOTFS_TYPE} Partition"
-  echo "-----------------------------"
-  echo "parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}"
-  fdisk -l ${MMC}
- fi
+	if [ "${FDISK_DEBUG}" ] ; then
+		echo "Debug: ${ROOTFS_TYPE} Partition"
+		echo "-----------------------------"
+		echo "parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}"
+		LC_ALL=C fdisk -l ${MMC}
+	fi
 }
 
 function format_boot_partition {
@@ -739,7 +739,7 @@ function populate_boot {
 
 		if [ ! "${bootloader_installed}" ] ; then
 			if [ "${spl_name}" ] ; then
-				if [ -f ${TEMPDIR}/dl/${MLO} ]; then
+				if [ -f ${TEMPDIR}/dl/${MLO} ] ; then
 					cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/${spl_name}
 					cp -v ${TEMPDIR}/dl/${MLO} ${TEMPDIR}/disk/backup/${spl_name}
 					echo "-----------------------------"
@@ -857,102 +857,102 @@ function populate_rootfs {
 			echo "-----------------------------"
 		fi
 
-	dpkg -x "${DIR}/dl/${DEBARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
+		dpkg -x "${DIR}/dl/${DEBARCH}/${ACTUAL_DEB_FILE}" ${TEMPDIR}/disk/
 
-	case "${DISTRO}" in
-	f14-armel)
-		#LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
-		sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
-		sed -i 's:ext3:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
+		case "${DISTRO}" in
+		f14-armel)
+			#LABEL="mmcblk2fs"          /                       ext3    defaults        1 1
+			sed -i 's:LABEL="mmcblk2fs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
+			sed -i 's:ext3:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
 
-		cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<-__EOF__
-			start on stopped rc RUNLEVEL=[2345]
-			stop on runlevel [016]
+			cat > ${TEMPDIR}/disk/etc/init/ttyO2.conf <<-__EOF__
+				start on stopped rc RUNLEVEL=[2345]
+				stop on runlevel [016]
 			
-			instance ttyO2
-			respawn
-			pre-start exec /sbin/securetty ttyO2
-			exec /sbin/agetty /dev/ttyO2 115200
+				instance ttyO2
+				respawn
+				pre-start exec /sbin/securetty ttyO2
+				exec /sbin/agetty /dev/ttyO2 115200
 
-		__EOF__
+			__EOF__
 
-		;;
-	f17-armel|f17-armhf)
-		#LABEL="rootfs"          /                       ext4    defaults        1 1
-		sed -i 's:LABEL="rootfs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
-		sed -i 's:ext4:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
-		;;
-	esac
+			;;
+		f17-armel|f17-armhf)
+			#LABEL="rootfs"          /                       ext4    defaults        1 1
+			sed -i 's:LABEL="rootfs":/dev/mmcblk0p2:g' ${TEMPDIR}/disk/etc/fstab
+			sed -i 's:ext4:'$ROOTFS_TYPE':g' ${TEMPDIR}/disk/etc/fstab
+			;;
+		esac
 
 		if [ "${BTRFS_FSTAB}" ] ; then
+			echo "btrfs selected as rootfs type, modifing /etc/fstab..."
 			sed -i 's/auto   errors=remount-ro/btrfs   defaults/g' ${TEMPDIR}/disk/etc/fstab
-		fi
-
-	#So most of the default images use ttyO2, but the bone uses ttyO0, need to find a better way..
-	if [ "x${SERIAL}" != "xttyO2" ] ; then 
-		if [ -f ${TEMPDIR}/disk/etc/init/ttyO2.conf ] ; then
-			echo "Fedora: Serial Login: fixing /etc/init/ttyO2.conf to use ${SERIAL}"
 			echo "-----------------------------"
-			mv ${TEMPDIR}/disk/etc/init/ttyO2.conf ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
-			sed -i -e 's:ttyO2:'$SERIAL':g' ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
 		fi
+
+		#So most of the Published Demostration images use ttyO2 by default, but devices like the BeagleBone, mx53loco do not..
+		if [ "x${SERIAL}" != "xttyO2" ] ; then
+			if [ -f ${TEMPDIR}/disk/etc/init/ttyO2.conf ] ; then
+				echo "Fedora: Serial Login: fixing /etc/init/ttyO2.conf to use ${SERIAL}"
+				echo "-----------------------------"
+				mv ${TEMPDIR}/disk/etc/init/ttyO2.conf ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
+				sed -i -e 's:ttyO2:'$SERIAL':g' ${TEMPDIR}/disk/etc/init/${SERIAL}.conf
+			fi
+		fi
+
+		cat >> ${TEMPDIR}/disk/etc/rc.d/rc.sysinit <<-__EOF__
+			#!/bin/sh
+
+			if [ ! -f /lib/modules/\$(uname -r)/modules.dep ] ; then
+				/sbin/depmod -a
+			fi
+		__EOF__
+
+		if [ "${CREATE_SWAP}" ] ; then
+			echo "-----------------------------"
+			echo "Extra: Creating SWAP File"
+			echo "-----------------------------"
+			echo "SWAP BUG creation note:"
+			echo "IF this takes a long time(>= 5mins) open another terminal and run dmesg"
+			echo "if theres a nasty error, ctrl-c/reboot and try again... its an annoying bug.."
+			echo "Background: usually occured in days before Ubuntu Lucid.."
+			echo "-----------------------------"
+
+			SPACE_LEFT=$(df ${TEMPDIR}/disk/ | grep ${MMC}${PARTITION_PREFIX}2 | awk '{print $4}')
+			let SIZE=${SWAP_SIZE}*1024
+
+			if [ ${SPACE_LEFT} -ge ${SIZE} ] ; then
+				dd if=/dev/zero of=${TEMPDIR}/disk/mnt/SWAP.swap bs=1M count=${SWAP_SIZE}
+				mkswap ${TEMPDIR}/disk/mnt/SWAP.swap
+				echo "/mnt/SWAP.swap  none  swap  sw  0 0" >> ${TEMPDIR}/disk/etc/fstab
+			else
+				echo "FIXME Recovery after user selects SWAP file bigger then whats left not implemented"
+			fi
+		fi
+
+		cd ${TEMPDIR}/disk/
+		sync
+		sync
+		cd "${DIR}/"
+
+		umount ${TEMPDIR}/disk || true
+
+		echo "Finished populating rootfs Partition"
+		echo "-----------------------------"
+		else
+		echo "-----------------------------"
+		echo "Unable to mount ${MMC}${PARTITION_PREFIX}2 at ${TEMPDIR}/disk to complete populating rootfs Partition"
+		echo "Please retry running the script, sometimes rebooting your system helps."
+		echo "-----------------------------"
+		exit
 	fi
-
-	cat >> ${TEMPDIR}/disk/etc/rc.d/rc.sysinit <<-__EOF__
-		#!/bin/sh
-
-		if [ ! -f /lib/modules/\$(uname -r)/modules.dep ] ; then
-			/sbin/depmod -a
-		fi
-	__EOF__
-
- if [ "$CREATE_SWAP" ] ; then
-
-  echo "-----------------------------"
-  echo "Extra: Creating SWAP File"
-  echo "-----------------------------"
-  echo "SWAP BUG creation note:"
-  echo "IF this takes a long time(>= 5mins) open another terminal and run dmesg"
-  echo "if theres a nasty error, ctrl-c/reboot and try again... its an annoying bug.."
-  echo "Background: usually occured in days before Ubuntu Lucid.."
-  echo "-----------------------------"
-
-  SPACE_LEFT=$(df ${TEMPDIR}/disk/ | grep ${MMC}${PARTITION_PREFIX}2 | awk '{print $4}')
-
-  let SIZE=$SWAP_SIZE*1024
-
-  if [ $SPACE_LEFT -ge $SIZE ] ; then
-   dd if=/dev/zero of=${TEMPDIR}/disk/mnt/SWAP.swap bs=1M count=$SWAP_SIZE
-   mkswap ${TEMPDIR}/disk/mnt/SWAP.swap
-   echo "/mnt/SWAP.swap  none  swap  sw  0 0" >> ${TEMPDIR}/disk/etc/fstab
-   else
-   echo "FIXME Recovery after user selects SWAP file bigger then whats left not implemented"
-  fi
- fi
-
- cd ${TEMPDIR}/disk/
- sync
- sync
- cd "${DIR}/"
-
- umount ${TEMPDIR}/disk || true
-
- echo "Finished populating rootfs Partition"
- echo "-----------------------------"
-else
- echo "-----------------------------"
- echo "Unable to mount ${MMC}${PARTITION_PREFIX}2 at ${TEMPDIR}/disk to complete populating rootfs Partition"
- echo "Please retry running the script, sometimes rebooting your system helps."
- echo "-----------------------------"
- exit
-fi
- echo "mk_mmc.sh script complete"
- echo "-----------------------------"
- echo "Default user: ${USER}"
- echo "Default pass: ${PASS}"
- echo "-----------------------------"
- echo "Reminder: Kernel/Modules: depmod will run on first, boot, so make sure to reboot once."
- echo "-----------------------------"
+	echo "mk_mmc.sh script complete"
+	echo "-----------------------------"
+	echo "Default user: ${USER}"
+	echo "Default pass: ${PASS}"
+	echo "-----------------------------"
+	echo "Reminder: Kernel/Modules: depmod will run on first, boot, so make sure to reboot once."
+	echo "-----------------------------"
 }
 
 function check_mmc {
@@ -1203,9 +1203,9 @@ function check_uboot_type {
 			                igepv2 - <serial mode only>
 			                panda - <PandaBoard Ax>
 			                panda_es - <PandaBoard ES>
-			-Supported Freescale Devices:
-			mx51evk - <mx51 Dev Board>
-			mx53loco - <Quick Start Board>
+			        Freescale:
+			                mx51evk - <i.MX51 "Babbage" Development Board>
+			                mx53loco - <i.MX53 Quick Start Development Board>
 			-----------------------------
 		__EOF__
 		exit
@@ -1282,10 +1282,9 @@ function usage {
 			                igepv2 - <serial mode only>
 			                panda - <PandaBoard Ax>
 			                panda_es - <PandaBoard ES>
-
-    (freescale)
-	mx51evk
-    mx53loco
+			        Freescale:
+			                mx51evk - <i.MX51 "Babbage" Development Board>
+			                mx53loco - <i.MX53 Quick Start Development Board>
 
 Optional:
 --distro <distro>
