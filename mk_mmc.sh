@@ -38,14 +38,6 @@ unset USE_LOCAL_BOOT
 unset LOCAL_BOOTLOADER
 unset ADDON
 
-#Common KMS:
-unset USE_KMS
-unset KMS_OVERRIDE
-
-unset FIRMWARE
-unset SERIAL_MODE
-unset BETA_KERNEL
-unset EXPERIMENTAL_KERNEL
 unset USB_ROOTFS
 unset KERNEL_DEB
 
@@ -682,13 +674,6 @@ function omap_fatfs_boot_part {
 	echo "Setting Boot Partition's Boot Flag"
 	echo "-----------------------------"
 	parted --script ${MMC} set 1 boot on
-
-	if [ "${FDISK_DEBUG}" ] ; then
-		echo "Debug: Partition 1 layout:"
-		echo "-----------------------------"
-		fdisk -l ${MMC}
-		echo "-----------------------------"
-	fi
 }
 
 function dd_to_drive {
@@ -741,13 +726,6 @@ function calculate_rootfs_partition {
 
 	parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}
 	sync
-
-	if [ "${FDISK_DEBUG}" ] ; then
-		echo "Debug: ${ROOTFS_TYPE} Partition"
-		echo "-----------------------------"
-		echo "parted --script ${PARTED_ALIGN} ${MMC} mkpart primary ${ROOTFS_TYPE} ${END_BOOT} ${END_DEVICE}"
-		LC_ALL=C fdisk -l ${MMC}
-	fi
 }
 
 function format_rootfs_partition {
